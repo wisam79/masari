@@ -1,0 +1,28 @@
+{
+  "name": "smart-transit",
+  "version": "1.0.0",
+  "description": "Smart Transit - State-based Transportation Management System",
+  "private": true,
+  "workspaces": [
+    "apps/mobile",
+    "apps/admin-dashboard",
+    "packages/shared"
+  ],
+  "scripts": {
+    "test": "pnpm -r test",
+    "test:watch": "pnpm -r test:watch",
+    "test:coverage": "pnpm -r test:coverage",
+    "lint": "pnpm -r lint",
+    "build": "pnpm -r build",
+    "dev:mobile": "pnpm -w -C apps/mobile start",
+    "dev:admin": "pnpm -w -C apps/admin-dashboard dev",
+    "dev": "pnpm dev:mobile & pnpm dev:admin"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "jest": "^29.5.0",
+    "prettier": "^3.0.0",
+    "typescript": "^5.0.0"
+  },
+  "packageManager": "pnpm@8.0.0"
+}

@@ -39,6 +39,18 @@ function getFileExtension(uri: string): string {
 }
 
 export class SubscriptionService {
+  async createReceiptUrl(receiptPath: string): Promise<string> {
+    const { data, error } = await supabase.storage
+      .from('receipts')
+      .createSignedUrl(receiptPath, 60 * 5);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return data.signedUrl;
+  }
+
   async uploadReceipt(studentId: string, receiptUri: string): Promise<string> {
     const response = await fetch(receiptUri);
 

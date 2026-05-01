@@ -39,6 +39,12 @@ export function useCreateSubscription() {
   });
 }
 
+export function useReceiptUrl() {
+  return useMutation({
+    mutationFn: (receiptPath: string) => subscriptionService.createReceiptUrl(receiptPath),
+  });
+}
+
 export function useApproveSubscription() {
   const queryClient = useQueryClient();
 

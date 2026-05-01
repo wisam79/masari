@@ -1,10 +1,15 @@
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, StyleSheet, Text, View } from 'react-native';
 import { AppButton } from '../../components/common/AppButton';
 import { EmptyState } from '../../components/common/EmptyState';
 import { Screen } from '../../components/common/Screen';
 import { Section } from '../../components/common/Section';
 import { useAuth } from '../../hooks/useAuth';
-import { useApproveSubscription, useDriverSubscriptions, useRejectSubscription } from '../../hooks/useSubscriptions';
+import {
+  useApproveSubscription,
+  useDriverSubscriptions,
+  useReceiptUrl,
+  useRejectSubscription,
+} from '../../hooks/useSubscriptions';
 import { useUsersByIds } from '../../hooks/useUsers';
 import { colors } from '../../lib/theme';
 import type { Subscription } from '../../types/models';
@@ -15,6 +20,7 @@ export default function StudentsScreen() {
   const subscriptions = useDriverSubscriptions(user?.id);
   const approveSubscription = useApproveSubscription();
   const rejectSubscription = useRejectSubscription();
+  const receiptUrl = useReceiptUrl();
   const studentIds = subscriptions.data?.map((subscription) => subscription.student_id) ?? [];
   const students = useUsersByIds(studentIds);
 
@@ -44,12 +50,39 @@ export default function StudentsScreen() {
     }
   };
 
+  const openReceipt = async (receiptPath: string | null) => {
+    if (!receiptPath) {
+      Alert.alert('لا يوجد وصل', 'هذا الطلب لا يحتوي على ملف وصل محفوظ.');
+      return;
+    }
+
+    try {
+      const url = await receiptUrl.mutateAsync(receiptPath);
+      const canOpen = await Linking.canOpenURL(url);
+      if (!canOpen) {
+        Alert.alert('تعذر فتح الوصل', 'الجهاز لا يستطيع فتح رابط الوصل.');
+        return;
+      }
+
+      await Linking.openURL(url);
+    } catch (error) {
+      Alert.alert('تعذر فتح الوصل', error instanceof Error ? error.message : 'حدث خطأ غير متوقع');
+    }
+  };
+
   const renderPending = (subscription: Subscription) => (
     <View key={subscription.id} style={styles.item}>
       <Text style={styles.itemTitle}>{getStudentName(subscription.student_id)}</Text>
       <Text style={styles.itemText}>المبلغ: {formatCurrency(subscription.amount)}</Text>
       <Text style={styles.itemText}>طريقة الدفع: {translatePayment(subscription.payment_method)}</Text>
       <Text style={styles.itemText}>المرجع: {subscription.payment_reference || 'غير مذكور'}</Text>
+      <AppButton
+        title={subscription.receipt_image_path ? 'عرض الوصل' : 'لا يوجد وصل'}
+        onPress={() => openReceipt(subscription.receipt_image_path)}
+        loading={receiptUrl.isPending}
+        disabled={!subscription.receipt_image_path}
+        variant="secondary"
+      />
       <View style={styles.actions}>
         <View style={styles.action}>
           <AppButton

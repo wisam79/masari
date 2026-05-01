@@ -41,14 +41,20 @@ export default function SubscriptionScreen() {
   );
 
   const pickReceipt = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('صلاحية الصور مطلوبة', 'اسمح للتطبيق بقراءة صورة الوصل من مكتبة الصور.');
+      return;
+    }
+
     const result = await ImagePicker.launchImageLibraryAsync({
       allowsEditing: false,
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       quality: 0.85,
     });
 
-    if (!result.canceled) {
-      setReceiptUri(result.assets[0]?.uri);
+    if (!result.canceled && result.assets[0]?.uri) {
+      setReceiptUri(result.assets[0].uri);
     }
   };
 
@@ -159,7 +165,13 @@ export default function SubscriptionScreen() {
               onPress={pickReceipt}
               variant="secondary"
             />
-            <AppButton title="إرسال طلب الاشتراك" onPress={submitSubscription} loading={createSubscription.isPending} />
+            {receiptUri ? <Text style={styles.receiptText}>صورة الوصل جاهزة للرفع مع الطلب</Text> : null}
+            <AppButton
+              title="إرسال طلب الاشتراك"
+              onPress={submitSubscription}
+              loading={createSubscription.isPending}
+              disabled={drivers.isLoading || subscriptions.isLoading}
+            />
           </>
         )}
       </Section>
@@ -236,6 +248,13 @@ const styles = StyleSheet.create({
   selectedText: {
     color: colors.primary,
     fontSize: 14,
+    fontWeight: '700',
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  receiptText: {
+    color: colors.success,
+    fontSize: 13,
     fontWeight: '700',
     textAlign: 'right',
     writingDirection: 'rtl',

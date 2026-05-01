@@ -106,6 +106,7 @@ npm run android
 - [System Architecture](docs/system_architecture.md)
 - [Step 1: Database Initialization](docs/step1_completion.md)
 - [Step 2: Project Setup, Auth & Routing](docs/step2_completion.md)
+- [Step 3: Subscription & File Upload Flow](docs/step3_completion.md)
 
 ## 🔐 Security
 

@@ -20,7 +20,6 @@ export function useDriverLocation(driverId?: string) {
     enabled: !!driverId,
     queryKey: ['driver-location', driverId],
     queryFn: () => locationRepository.getDriverLocation(driverId as string),
-    refetchInterval: 60_000,
   });
 
   useEffect(() => {
@@ -132,6 +131,7 @@ export function useSmartDriverLocationPolling(
         const nextIntervalMs = locationService.getPollingIntervalForDistance(nearestDistanceMeters);
 
         if (!isMounted) {
+          clearPollingTimeout();
           return;
         }
 
@@ -147,6 +147,7 @@ export function useSmartDriverLocationPolling(
         await scheduleNextUpdate(nextIntervalMs);
       } catch (error) {
         if (!isMounted) {
+          clearPollingTimeout();
           return;
         }
 

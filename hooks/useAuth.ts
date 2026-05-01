@@ -33,7 +33,9 @@ export function useAuth() {
     };
 
     initializeAuth();
+  }, [isInitialized, setInitialized, setUser, setLoading]);
 
+  useEffect(() => {
     const { data: { subscription } } = authService.onAuthStateChange((user) => {
       setUser(user);
     });
@@ -41,7 +43,7 @@ export function useAuth() {
     return () => {
       subscription.unsubscribe();
     };
-  }, [isInitialized, setInitialized, setUser, setLoading]);
+  }, [setUser]);
 
   const signIn = async (email: string, pass: string) => {
     setLoading(true);

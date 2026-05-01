@@ -81,6 +81,10 @@ export class SubscriptionService {
       ? await this.uploadReceipt(request.studentId, request.receiptUri)
       : null;
 
+    const receiptUrl = receiptPath
+      ? supabase.storage.from('receipts').getPublicUrl(receiptPath).data.publicUrl
+      : null;
+
     return subscriptionRepository.createSubscription({
       amount: FINANCIAL.BASE_SUBSCRIPTION,
       driver_id: request.driverId,
@@ -88,7 +92,7 @@ export class SubscriptionService {
       payment_method: request.paymentMethod,
       payment_reference: request.paymentReference?.trim() || null,
       receipt_image_path: receiptPath,
-      receipt_image_url: receiptPath,
+      receipt_image_url: receiptUrl,
       status: 'pending',
       student_id: request.studentId,
     });

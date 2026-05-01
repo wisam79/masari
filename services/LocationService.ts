@@ -29,7 +29,10 @@ export class LocationService {
   }
 
   async getCurrentCoordinates(): Promise<Coordinates> {
-    const permission = await Location.requestForegroundPermissionsAsync();
+    let permission = await Location.getForegroundPermissionsAsync();
+    if (permission.status !== Location.PermissionStatus.GRANTED) {
+      permission = await Location.requestForegroundPermissionsAsync();
+    }
 
     if (permission.status !== Location.PermissionStatus.GRANTED) {
       throw new Error('يجب السماح للتطبيق باستخدام الموقع لتحديد نقطة الصعود');

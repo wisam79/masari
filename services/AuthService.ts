@@ -73,8 +73,8 @@ export class AuthService {
         return { success: false, error: error.message };
       }
       return { success: true };
-    } catch (_error) {
-      return { success: false, error: 'Failed to send reset email' };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to send reset email' };
     }
   }
 

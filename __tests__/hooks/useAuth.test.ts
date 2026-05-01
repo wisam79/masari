@@ -1,5 +1,4 @@
 // __tests__/hooks/useAuth.test.ts
-import { useAuth } from '../../hooks/useAuth';
 import { AuthService } from '../../services/AuthService';
 
 jest.mock('../../services/AuthService');

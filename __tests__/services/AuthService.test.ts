@@ -1,9 +1,28 @@
 // __tests__/services/AuthService.test.ts
 import { AuthService } from '../../services/AuthService';
 import { supabase } from '../../lib/supabase';
+import { userRepository } from '../../repositories/UserRepository';
 
 // Mock Supabase
-jest.mock('../../lib/supabase');
+jest.mock('../../lib/supabase', () => ({
+  supabase: {
+    auth: {
+      signInWithPassword: jest.fn(),
+      signUp: jest.fn(),
+      resetPasswordForEmail: jest.fn(),
+      getUser: jest.fn(),
+      signOut: jest.fn(),
+      onAuthStateChange: jest.fn(),
+    },
+  },
+}));
+
+// Mock userRepository
+jest.mock('../../repositories/UserRepository', () => ({
+  userRepository: {
+    getUserById: jest.fn(),
+  },
+}));
 
 describe('AuthService', () => {
   let authService: AuthService;
@@ -21,12 +40,15 @@ describe('AuthService', () => {
       const mockUser = {
         id: 'test-id',
         email: 'test@example.com',
+        full_name: 'Test User',
+        role: 'student',
       };
       
       (supabase.auth.signInWithPassword as jest.Mock).mockResolvedValue({
         data: { user: mockUser },
         error: null,
       });
+      (userRepository.getUserById as jest.Mock).mockResolvedValue(mockUser);
 
       const result = await authService.signInWithEmail('test@example.com', 'password123');
       
@@ -52,12 +74,15 @@ describe('AuthService', () => {
       const mockUser = {
         id: 'test-id',
         email: 'new@example.com',
+        full_name: 'New User',
+        role: 'student',
       };
       
       (supabase.auth.signUp as jest.Mock).mockResolvedValue({
         data: { user: mockUser },
         error: null,
       });
+      (userRepository.getUserById as jest.Mock).mockResolvedValue(mockUser);
 
       const result = await authService.signUpWithEmail('new@example.com', 'password123');
       

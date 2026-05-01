@@ -1,34 +1,17 @@
 // __tests__/hooks/useLocationTracking.test.ts
 import { LocationService } from '../../services/LocationService';
-import { LocationRepository } from '../../repositories/LocationRepository';
 
-jest.mock('../../services/LocationService');
-jest.mock('../../repositories/LocationRepository');
-
-describe('LocationService', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it('should update driver location', async () => {
-    const mockLocation = {
-      driver_id: 'driver-1',
-      lat: 33.3152,
-      lng: 44.3661,
-    };
-    
-    (LocationRepository.prototype.upsertDriverLocation as jest.Mock).mockResolvedValue(mockLocation);
-
-    const repo = new LocationRepository();
-    const result = await repo.upsertDriverLocation({
-      driver_id: 'driver-1',
-      lat: 33.3152,
-      lng: 44.3661,
-    });
-    
-    expect(result).toEqual(mockLocation);
-  });
-});
+jest.mock('expo-location', () => ({
+  requestForegroundPermissionsAsync: jest.fn(),
+  getCurrentPositionAsync: jest.fn(),
+  Accuracy: {
+    Balanced: 'balanced',
+  },
+  PermissionStatus: {
+    GRANTED: 'granted',
+    DENIED: 'denied',
+  },
+}));
 
 describe('LocationService - distance calculation', () => {
   it('should calculate distance between coordinates', () => {
@@ -58,8 +41,8 @@ describe('LocationService - distance calculation', () => {
   it('should get polling interval for distance', () => {
     const service = new LocationService();
     
-    expect(service.getPollingIntervalForDistance(100)).toBe(60000); // Fast
-    expect(service.getPollingIntervalForDistance(600)).toBe(300000); // Normal
-    expect(service.getPollingIntervalForDistance(null)).toBe(300000); // Normal
+    expect(service.getPollingIntervalForDistance(100)).toBe(60000);
+    expect(service.getPollingIntervalForDistance(600)).toBe(300000);
+    expect(service.getPollingIntervalForDistance(null)).toBe(300000);
   });
 });

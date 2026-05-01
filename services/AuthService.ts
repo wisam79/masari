@@ -52,7 +52,7 @@ export class AuthService {
       }
 
       // We wait a brief moment to allow the database trigger to create the public.users record
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise<void>((resolve) => setTimeout(resolve, 500));
       const user = await userRepository.getUserById(data.user.id);
 
       if (!user) {

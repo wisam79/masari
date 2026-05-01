@@ -2,7 +2,17 @@
 import { UserRepository } from '../../repositories/UserRepository';
 import { supabase } from '../../lib/supabase';
 
-jest.mock('../../lib/supabase');
+jest.mock('../../lib/supabase', () => ({
+  supabase: {
+    from: jest.fn(() => ({
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      single: jest.fn().mockResolvedValue({ data: null, error: null }),
+      insert: jest.fn().mockReturnThis(),
+      update: jest.fn().mockReturnThis(),
+    })),
+  },
+}));
 
 describe('UserRepository', () => {
   let userRepository: UserRepository;
@@ -24,10 +34,12 @@ describe('UserRepository', () => {
         role: 'student',
       };
       
-      (supabase.from().select().eq().single as jest.Mock).mockResolvedValue({
-        data: mockUser,
-        error: null,
-      });
+      const mockChain = {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        single: jest.fn().mockResolvedValue({ data: mockUser, error: null }),
+      };
+      (supabase.from as jest.Mock).mockReturnValue(mockChain);
 
       const result = await userRepository.getUserById('test-id');
       
@@ -35,10 +47,12 @@ describe('UserRepository', () => {
     });
 
     it('should return null on error', async () => {
-      (supabase.from().select().eq().single as jest.Mock).mockResolvedValue({
-        data: null,
-        error: new Error('Not found'),
-      });
+      const mockChain = {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        single: jest.fn().mockResolvedValue({ data: null, error: new Error('Not found') }),
+      };
+      (supabase.from as jest.Mock).mockReturnValue(mockChain);
 
       const result = await userRepository.getUserById('invalid-id');
       
@@ -53,10 +67,12 @@ describe('UserRepository', () => {
         phone: '1234567890',
       };
       
-      (supabase.from().select().eq().single as jest.Mock).mockResolvedValue({
-        data: mockUser,
-        error: null,
-      });
+      const mockChain = {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        single: jest.fn().mockResolvedValue({ data: mockUser, error: null }),
+      };
+      (supabase.from as jest.Mock).mockReturnValue(mockChain);
 
       const result = await userRepository.getUserByPhone('1234567890');
       
@@ -71,10 +87,12 @@ describe('UserRepository', () => {
         full_name: 'New User',
       };
       
-      (supabase.from().insert().select().single as jest.Mock).mockResolvedValue({
-        data: mockUser,
-        error: null,
-      });
+      const mockChain = {
+        insert: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        single: jest.fn().mockResolvedValue({ data: mockUser, error: null }),
+      };
+      (supabase.from as jest.Mock).mockReturnValue(mockChain);
 
       const result = await userRepository.createUser({
         full_name: 'New User',
@@ -92,10 +110,13 @@ describe('UserRepository', () => {
         full_name: 'Updated Name',
       };
       
-      (supabase.from().update().eq().select().single as jest.Mock).mockResolvedValue({
-        data: mockUser,
-        error: null,
-      });
+      const mockChain = {
+        update: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        single: jest.fn().mockResolvedValue({ data: mockUser, error: null }),
+      };
+      (supabase.from as jest.Mock).mockReturnValue(mockChain);
 
       const result = await userRepository.updateUser('test-id', { full_name: 'Updated Name' });
       
@@ -110,10 +131,13 @@ describe('UserRepository', () => {
         role: 'driver',
       };
       
-      (supabase.from().update().eq().select().single as jest.Mock).mockResolvedValue({
-        data: mockUser,
-        error: null,
-      });
+      const mockChain = {
+        update: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        single: jest.fn().mockResolvedValue({ data: mockUser, error: null }),
+      };
+      (supabase.from as jest.Mock).mockReturnValue(mockChain);
 
       const result = await userRepository.updateUserRole('test-id', 'driver');
       

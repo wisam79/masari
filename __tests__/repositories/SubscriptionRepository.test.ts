@@ -2,7 +2,18 @@
 import { SubscriptionRepository } from '../../repositories/SubscriptionRepository';
 import { supabase } from '../../lib/supabase';
 
-jest.mock('../../lib/supabase');
+jest.mock('../../lib/supabase', () => ({
+  supabase: {
+    from: jest.fn(() => ({
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      order: jest.fn().mockReturnThis(),
+      insert: jest.fn().mockReturnThis(),
+      single: jest.fn().mockResolvedValue({ data: null, error: null }),
+    })),
+    rpc: jest.fn().mockResolvedValue({ data: null, error: null }),
+  },
+}));
 
 describe('SubscriptionRepository', () => {
   let subscriptionRepository: SubscriptionRepository;
@@ -25,10 +36,12 @@ describe('SubscriptionRepository', () => {
         },
       ];
       
-      (supabase.from().select().eq().order as jest.Mock).mockResolvedValue({
-        data: mockSubscriptions,
-        error: null,
-      });
+      const mockChain = {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        order: jest.fn().mockResolvedValue({ data: mockSubscriptions, error: null }),
+      };
+      (supabase.from as jest.Mock).mockReturnValue(mockChain);
 
       const result = await subscriptionRepository.listStudentSubscriptions('student-1');
       
@@ -44,10 +57,12 @@ describe('SubscriptionRepository', () => {
         status: 'pending',
       };
       
-      (supabase.from().insert().select().single as jest.Mock).mockResolvedValue({
-        data: mockSubscription,
-        error: null,
-      });
+      const mockChain = {
+        insert: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        single: jest.fn().mockResolvedValue({ data: mockSubscription, error: null }),
+      };
+      (supabase.from as jest.Mock).mockReturnValue(mockChain);
 
       const result = await subscriptionRepository.createSubscription({
         student_id: 'student-1',

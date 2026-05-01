@@ -39,4 +39,6 @@ coverage/
 
 # Misc
 *.log
-assets/*.png
+
+.gemini/
+gha-creds-*.json

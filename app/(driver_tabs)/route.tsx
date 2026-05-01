@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { AppButton } from '../../components/common/AppButton';
@@ -6,7 +7,11 @@ import { Screen } from '../../components/common/Screen';
 import { Section } from '../../components/common/Section';
 import { getTodayDate, useDriverAttendance, useUpsertAttendance } from '../../hooks/useAttendance';
 import { useAuth } from '../../hooks/useAuth';
-import { useUpdateDriverLocation } from '../../hooks/useLocationTracking';
+import {
+  useDriverLocation,
+  useSmartDriverLocationPolling,
+  useUpdateDriverLocation,
+} from '../../hooks/useLocationTracking';
 import { useStudentProfiles } from '../../hooks/useProfiles';
 import { useDriverSubscriptions } from '../../hooks/useSubscriptions';
 import { useUsersByIds } from '../../hooks/useUsers';
@@ -24,6 +29,7 @@ export default function RouteScreen() {
   const attendance = useDriverAttendance(user?.id, today);
   const upsertAttendance = useUpsertAttendance();
   const updateDriverLocation = useUpdateDriverLocation();
+  const driverLocation = useDriverLocation(user?.id);
 
   const visibleSubscriptions = activeSubscriptions.filter((subscription) => {
     const status = attendance.data?.find((item) => item.student_id === subscription.student_id)?.status;
@@ -31,6 +37,15 @@ export default function RouteScreen() {
   });
 
   const firstProfile = profiles.data?.[0];
+  const pickupPoints = useMemo(
+    () =>
+      visibleSubscriptions
+        .map((subscription) => profiles.data?.find((profile) => profile.user_id === subscription.student_id))
+        .filter((profile): profile is NonNullable<typeof profile> => Boolean(profile))
+        .map((profile) => ({ lat: profile.pickup_lat, lng: profile.pickup_lng })),
+    [profiles.data, visibleSubscriptions],
+  );
+  const smartPolling = useSmartDriverLocationPolling(user?.id, pickupPoints, pickupPoints.length > 0);
 
   const updateLocation = async () => {
     if (!user?.id) {
@@ -69,6 +84,18 @@ export default function RouteScreen() {
   return (
     <Screen>
       <Section title="موقع السائق" subtitle="حدّث موقعك قبل الانطلاق أو أثناء الرحلة ليظهر للطلاب المرتبطين بك.">
+        <View style={styles.statusBox}>
+          <Text style={styles.statusText}>
+            التتبع الذكي: {smartPolling.isPolling ? 'يعمل' : 'ينتظر وجود طلاب فعّالين'}
+          </Text>
+          <Text style={styles.statusText}>
+            أقرب طالب: {formatDistance(smartPolling.nearestDistanceMeters)}
+          </Text>
+          <Text style={styles.statusText}>
+            الوتيرة القادمة: {formatInterval(smartPolling.nextIntervalMs)}
+          </Text>
+          {smartPolling.lastError ? <Text style={styles.errorText}>{smartPolling.lastError}</Text> : null}
+        </View>
         <AppButton
           title="تحديث موقعي الآن"
           onPress={updateLocation}
@@ -102,6 +129,13 @@ export default function RouteScreen() {
                 />
               );
             })}
+            {driverLocation.data ? (
+              <Marker
+                coordinate={{ latitude: driverLocation.data.lat, longitude: driverLocation.data.lng }}
+                title="موقعك الحالي"
+                pinColor={colors.primary}
+              />
+            ) : null}
           </MapView>
         </View>
       ) : null}
@@ -137,6 +171,26 @@ export default function RouteScreen() {
   );
 }
 
+function formatDistance(distanceMeters: number | null): string {
+  if (distanceMeters === null) {
+    return 'غير محسوب';
+  }
+
+  if (distanceMeters >= 1000) {
+    return `${(distanceMeters / 1000).toFixed(1)} كم`;
+  }
+
+  return `${Math.round(distanceMeters)} متر`;
+}
+
+function formatInterval(intervalMs: number | null): string {
+  if (intervalMs === null) {
+    return 'غير محددة';
+  }
+
+  return `${Math.round(intervalMs / 60000)} دقيقة`;
+}
+
 function translateAttendance(status: string): string {
   if (status === 'absent') return 'غائب';
   if (status === 'driver_waiting') return 'السائق وصل';
@@ -156,6 +210,24 @@ const styles = StyleSheet.create({
   },
   map: {
     flex: 1,
+  },
+  statusBox: {
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: 8,
+    gap: 5,
+    padding: 12,
+  },
+  statusText: {
+    color: colors.text,
+    fontSize: 14,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  errorText: {
+    color: colors.danger,
+    fontSize: 13,
+    textAlign: 'right',
+    writingDirection: 'rtl',
   },
   item: {
     backgroundColor: colors.surfaceMuted,

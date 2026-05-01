@@ -1,25 +1,108 @@
+import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+import { supabase } from '../lib/supabase';
 import { attendanceRepository } from '../repositories/AttendanceRepository';
-import type { DailyAttendanceInsert, DailyAttendanceUpdate } from '../types/models';
+import type { DailyAttendance, DailyAttendanceInsert, DailyAttendanceUpdate } from '../types/models';
 
 export function getTodayDate(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
 export function useStudentAttendance(studentId?: string, date = getTodayDate()) {
-  return useQuery({
+  const queryClient = useQueryClient();
+  const query = useQuery({
     enabled: !!studentId,
     queryKey: ['student-attendance', studentId, date],
     queryFn: () => attendanceRepository.getStudentAttendanceForDate(studentId as string, date),
   });
+
+  useEffect(() => {
+    if (!studentId) {
+      return undefined;
+    }
+
+    const channel = supabase
+      .channel(`student-attendance:${studentId}:${date}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'daily_attendance',
+          filter: `student_id=eq.${studentId}`,
+        },
+        (payload: RealtimePostgresChangesPayload<DailyAttendance>) => {
+          const payloadDate = payload.eventType === 'DELETE' ? payload.old.date : payload.new.date;
+          if (payloadDate !== date) {
+            return;
+          }
+
+          if (payload.eventType === 'DELETE') {
+            queryClient.setQueryData(['student-attendance', studentId, date], null);
+            return;
+          }
+
+          queryClient.setQueryData(['student-attendance', studentId, date], payload.new);
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [date, queryClient, studentId]);
+
+  return query;
 }
 
 export function useDriverAttendance(driverId?: string, date = getTodayDate()) {
-  return useQuery({
+  const queryClient = useQueryClient();
+  const query = useQuery({
     enabled: !!driverId,
     queryKey: ['driver-attendance', driverId, date],
     queryFn: () => attendanceRepository.listDriverAttendanceForDate(driverId as string, date),
   });
+
+  useEffect(() => {
+    if (!driverId) {
+      return undefined;
+    }
+
+    const channel = supabase
+      .channel(`driver-attendance:${driverId}:${date}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'daily_attendance',
+          filter: `driver_id=eq.${driverId}`,
+        },
+        (payload: RealtimePostgresChangesPayload<DailyAttendance>) => {
+          const payloadDate = payload.eventType === 'DELETE' ? payload.old.date : payload.new.date;
+          if (payloadDate !== date) {
+            return;
+          }
+
+          queryClient.setQueryData<DailyAttendance[]>(['driver-attendance', driverId, date], (current = []) => {
+            if (payload.eventType === 'DELETE') {
+              return current.filter((item) => item.id !== payload.old.id);
+            }
+
+            const next = current.filter((item) => item.id !== payload.new.id);
+            return [...next, payload.new].sort((left, right) => left.created_at?.localeCompare(right.created_at ?? '') ?? 0);
+          });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [date, driverId, queryClient]);
+
+  return query;
 }
 
 export function useUpsertAttendance() {

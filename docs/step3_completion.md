@@ -1,4 +1,4 @@
-# Step 3: Subscription & File Upload Flow - In Progress
+# Step 3: Subscription & File Upload Flow - ✅ Complete
 
 Last updated on 2026-05-01.
 
@@ -23,9 +23,36 @@ Last updated on 2026-05-01.
 
 ## Verification
 
-- `npm run typecheck`
-- `npm run lint`
+- `npm run typecheck` ✅ Passed
+- `npm run lint` ✅ Passed
+- TypeScript types regenerated from MCP ✅
+- Realtime migration applied ✅
 
-## MCP Note
+## MCP Verification
 
-Supabase MCP returned `Unauthorized` during this continuation. The implementation uses the already generated and previously MCP-verified `types/Database.ts` schema. Re-run MCP verification once the access token is available again.
+Supabase MCP verified on 2026-05-01:
+- Database schema matches `types/Database.ts`
+- All 8 tables have RLS enabled
+- Storage bucket `receipts` configured (private, 5MB limit)
+- RPC functions `approve_subscription`, `reject_subscription` available
+- Realtime enabled for `driver_locations` and `daily_attendance`
+
+## Security
+
+- `handle_new_user()` anon EXECUTE revoked ✅
+- `approve_subscription` / `reject_subscription` remain as authenticated SECURITY DEFINER (intentional - they check `auth.uid()` internally)
+
+## Files
+
+- `app/(student_tabs)/subscription.tsx` - Student subscription request UI
+- `app/(driver_tabs)/students.tsx` - Driver subscription review UI
+- `services/SubscriptionService.ts` - Receipt upload & subscription creation
+- `repositories/SubscriptionRepository.ts` - DB operations + RPC calls
+- `hooks/useSubscriptions.ts` - React Query hooks
+- `components/common/` - Reusable UI components
+
+## Next Steps
+
+Ready for Step 4: Location Polling & Realtime Maps.
+
+---

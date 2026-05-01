@@ -14,3 +14,12 @@ export function validateName(name: string): boolean {
 export function validateAmount(amount: number): boolean {
   return amount > 0 && amount <= 1000000;
 }
+
+export function validateEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
+export function validatePassword(password: string): boolean {
+  return password.length >= 6;
+}

@@ -43,24 +43,36 @@ export function useAuth() {
     };
   }, [isInitialized, setInitialized, setUser, setLoading]);
 
-  const sendOTP = async (phone: string) => {
+  const signIn = async (email: string, pass: string) => {
     setLoading(true);
     try {
-      const result = await authService.sendOTP(phone);
+      const result = await authService.signInWithEmail(email, pass);
+      if (result.success && result.user) {
+        setUser(result.user);
+      }
       return result;
     } finally {
       setLoading(false);
     }
   };
 
-  const verifyOTP = async (phone: string, token: string) => {
+  const signUp = async (email: string, pass: string) => {
     setLoading(true);
     try {
-      const result = await authService.verifyOTP(phone, token);
+      const result = await authService.signUpWithEmail(email, pass);
       if (result.success && result.user) {
         setUser(result.user);
       }
       return result;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resetPassword = async (email: string) => {
+    setLoading(true);
+    try {
+      return await authService.resetPassword(email);
     } finally {
       setLoading(false);
     }
@@ -83,8 +95,9 @@ export function useAuth() {
     user,
     isLoading: isLoading || !isInitialized,
     isAuthenticated,
-    sendOTP,
-    verifyOTP,
+    signIn,
+    signUp,
+    resetPassword,
     signOut,
   };
 }

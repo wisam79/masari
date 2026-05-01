@@ -1,11 +1,10 @@
 import { useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Alert, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { AppButton } from '../components/common/AppButton';
 import { Screen } from '../components/common/Screen';
 import { Section } from '../components/common/Section';
 import { useAuth } from '../hooks/useAuth';
-import { colors } from '../lib/theme';
 import { userRepository } from '../repositories/UserRepository';
 import { useAuthStore } from '../store/authStore';
 
@@ -41,56 +40,41 @@ export default function RoleSelectionScreen() {
 
   return (
     <Screen>
-      <View style={styles.hero}>
-        <Text style={styles.appName}>مساري</Text>
-        <Text style={styles.title}>اختر طريقة استخدامك للتطبيق</Text>
+      <View className="gap-2 pt-6">
+        <Text className="text-primary text-[42px] font-black text-right" style={{ writingDirection: 'rtl' }}>
+          مساري
+        </Text>
+        <Text className="text-text text-[22px] font-extrabold text-right" style={{ writingDirection: 'rtl' }}>
+          اختر طريقة استخدامك للتطبيق
+        </Text>
       </View>
 
-      <Section
-        title="طالب"
-        subtitle="اربط اشتراكك بسائق يخدم جامعتك، وارفع وصل الدفع، وحدد غيابك اليومي عند الحاجة."
-      >
-        <AppButton
-          title="الدخول كطالب"
-          onPress={() => handleSelectRole('student')}
-          loading={loadingRole === 'student'}
-          disabled={loadingRole !== null}
-        />
-      </Section>
+      <View className="mt-8 gap-6">
+        <Section
+          title="طالب"
+          subtitle="اربط اشتراكك بسائق يخدم جامعتك، وارفع وصل الدفع، وحدد غيابك اليومي عند الحاجة."
+        >
+          <AppButton
+            title="الدخول كطالب"
+            onPress={() => handleSelectRole('student')}
+            loading={loadingRole === 'student'}
+            disabled={loadingRole !== null}
+          />
+        </Section>
 
-      <Section
-        title="سائق"
-        subtitle="اختر المؤسسات التي تخدمها، راجع طلبات الاشتراك، وأدر حضور الطلاب ومسار اليوم."
-      >
-        <AppButton
-          title="الدخول كسائق"
-          onPress={() => handleSelectRole('driver')}
-          loading={loadingRole === 'driver'}
-          disabled={loadingRole !== null}
-          variant="secondary"
-        />
-      </Section>
+        <Section
+          title="سائق"
+          subtitle="اختر المؤسسات التي تخدمها، راجع طلبات الاشتراك، وأدر حضور الطلاب ومسار اليوم."
+        >
+          <AppButton
+            title="الدخول كسائق"
+            onPress={() => handleSelectRole('driver')}
+            loading={loadingRole === 'driver'}
+            disabled={loadingRole !== null}
+            variant="secondary"
+          />
+        </Section>
+      </View>
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  hero: {
-    gap: 8,
-    paddingTop: 24,
-  },
-  appName: {
-    color: colors.primary,
-    fontSize: 42,
-    fontWeight: '900',
-    textAlign: 'right',
-    writingDirection: 'rtl',
-  },
-  title: {
-    color: colors.text,
-    fontSize: 22,
-    fontWeight: '800',
-    textAlign: 'right',
-    writingDirection: 'rtl',
-  },
-});

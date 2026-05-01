@@ -9,28 +9,11 @@ export interface AuthResult {
 }
 
 export class AuthService {
-  async sendOTP(phone: string): Promise<AuthResult> {
+  async signInWithEmail(email: string, password: string): Promise<AuthResult> {
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        phone,
-      });
-
-      if (error) {
-        return { success: false, error: error.message };
-      }
-
-      return { success: true };
-    } catch (_error) {
-      return { success: false, error: 'Failed to send OTP' };
-    }
-  }
-
-  async verifyOTP(phone: string, token: string): Promise<AuthResult> {
-    try {
-      const { data, error } = await supabase.auth.verifyOtp({
-        phone,
-        token,
-        type: 'sms',
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
 
       if (error) {
@@ -41,24 +24,57 @@ export class AuthService {
         return { success: false, error: 'User not found' };
       }
 
-      let user = await userRepository.getUserById(data.user.id);
+      const user = await userRepository.getUserById(data.user.id);
 
       if (!user) {
-        user = await userRepository.createUser({
-          id: data.user.id,
-          phone,
-          full_name: '',
-          role: 'unassigned',
-        });
-      }
-
-      if (!user) {
-        return { success: false, error: 'Failed to create user' };
+        return { success: false, error: 'Failed to fetch user profile' };
       }
 
       return { success: true, user };
     } catch (_error) {
-      return { success: false, error: 'Failed to verify OTP' };
+      return { success: false, error: 'Failed to sign in' };
+    }
+  }
+
+  async signUpWithEmail(email: string, password: string): Promise<AuthResult> {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      if (!data.user) {
+        return { success: false, error: 'Failed to create user' };
+      }
+
+      // We wait a brief moment to allow the database trigger to create the public.users record
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      const user = await userRepository.getUserById(data.user.id);
+
+      if (!user) {
+        // If trigger fails or delays, we just return success but no user profile yet
+        return { success: true, error: 'Profile creation pending' };
+      }
+
+      return { success: true, user };
+    } catch (_error) {
+      return { success: false, error: 'Failed to sign up' };
+    }
+  }
+
+  async resetPassword(email: string): Promise<AuthResult> {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      if (error) {
+        return { success: false, error: error.message };
+      }
+      return { success: true };
+    } catch (_error) {
+      return { success: false, error: 'Failed to send reset email' };
     }
   }
 

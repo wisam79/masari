@@ -25,7 +25,8 @@ export default function RootLayout() {
         {!isAuthenticated ? (
           <>
             <Stack.Screen name="index" options={{ title: 'Login' }} />
-            <Stack.Screen name="otp" options={{ title: 'Verify OTP' }} />
+            <Stack.Screen name="signup" options={{ title: 'Sign Up', presentation: 'modal' }} />
+            <Stack.Screen name="reset-password" options={{ title: 'Reset Password', presentation: 'modal' }} />
           </>
         ) : user?.role === 'unassigned' ? (
           <Stack.Screen name="role-selection" options={{ title: 'Select Role' }} />

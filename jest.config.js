@@ -1,3 +1,4 @@
+// jest.config.js
 module.exports = {
   preset: 'jest-expo',
   transformIgnorePatterns: [
@@ -14,4 +15,7 @@ module.exports = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
   },
+  testEnvironment: 'jsdom',
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+  moduleDirectories: ['node_modules', '<rootDir>'],
 };

@@ -1,4 +1,4 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, Pressable, Text } from 'react-native';
 import { colors } from '../../lib/theme';
 
 interface AppButtonProps {
@@ -7,6 +7,7 @@ interface AppButtonProps {
   loading?: boolean;
   disabled?: boolean;
   variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
+  className?: string;
 }
 
 export function AppButton({
@@ -15,71 +16,47 @@ export function AppButton({
   loading = false,
   disabled = false,
   variant = 'primary',
+  className = '',
 }: AppButtonProps) {
   const isDisabled = disabled || loading;
+
+  const baseStyle = "items-center rounded-lg border min-h-[48px] justify-center px-4";
+  const disabledStyle = isDisabled ? "opacity-55" : "";
+  
+  let variantStyle = "";
+  let textStyle = "text-white text-base font-bold text-center";
+
+  switch (variant) {
+    case 'primary':
+      variantStyle = "bg-primary border-primary";
+      break;
+    case 'secondary':
+      variantStyle = "bg-surface border-primary";
+      textStyle = "text-primary text-base font-bold text-center";
+      break;
+    case 'danger':
+      variantStyle = "bg-danger border-danger";
+      break;
+    case 'ghost':
+      variantStyle = "bg-transparent border-transparent";
+      textStyle = "text-primary text-base font-bold text-center";
+      break;
+  }
 
   return (
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
       disabled={isDisabled}
-      style={({ pressed }) => [
-        styles.button,
-        styles[variant],
-        isDisabled && styles.disabled,
-        pressed && !isDisabled && styles.pressed,
-      ]}
+      className={`${baseStyle} ${variantStyle} ${disabledStyle} ${className} active:opacity-85`}
     >
       {loading ? (
         <ActivityIndicator color={variant === 'secondary' || variant === 'ghost' ? colors.primary : '#FFFFFF'} />
       ) : (
-        <Text style={[styles.text, (variant === 'secondary' || variant === 'ghost') && styles.textSecondary]}>
+        <Text className={textStyle} style={{ writingDirection: 'rtl' }}>
           {title}
         </Text>
       )}
     </Pressable>
   );
 }
-
-const styles = StyleSheet.create({
-  button: {
-    alignItems: 'center',
-    borderRadius: 8,
-    borderWidth: 1,
-    minHeight: 48,
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-  },
-  primary: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  secondary: {
-    backgroundColor: colors.surface,
-    borderColor: colors.primary,
-  },
-  danger: {
-    backgroundColor: colors.danger,
-    borderColor: colors.danger,
-  },
-  ghost: {
-    backgroundColor: 'transparent',
-    borderColor: 'transparent',
-  },
-  disabled: {
-    opacity: 0.55,
-  },
-  pressed: {
-    opacity: 0.85,
-  },
-  text: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-    textAlign: 'center',
-    writingDirection: 'rtl',
-  },
-  textSecondary: {
-    color: colors.primary,
-  },
-});

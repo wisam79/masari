@@ -1,480 +1,452 @@
-# Smart Transit System Architecture
+# System Architecture - مساري (Masari)
 
-**Last Updated:** April 30, 2026  
-**Language:** Arabic (العربية) - Primary  
-**Status:** Step 1 - Architecture Documentation
-
----
-
-## 🏗️ System Overview
-
-**Smart Transit** is a state-based transportation management ecosystem for connecting students to educational institutions. The system operates on **manual state updates** (not live GPS tracking) and enforces strict **financial accuracy** with zero tolerance for mathematical errors.
-
-### Core Principle
-Drivers manually update route and student states throughout the day → students receive real-time notifications → financial transactions are automatically calculated and recorded.
+## Overview
+Masari is a mobile-first transportation management system connecting university students with monthly bus subscription drivers. The system uses a state-based approach where drivers manually update trip status, and students receive real-time notifications.
 
 ---
 
-## 📦 Architecture Layers
+## Technology Stack
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                   Presentation Layer                     │
-│  ┌──────────────────────┬──────────────────────┐        │
-│  │ Mobile App (Expo)    │ Web Dashboard (Next) │        │
-│  │ - Student UI         │ - Admin CRUD         │        │
-│  │ - Driver UI          │ - Analytics          │        │
-│  │ - RTL Support        │ - Financial Reports  │        │
-│  └──────────────────────┴──────────────────────┘        │
-├─────────────────────────────────────────────────────────┤
-│                   Business Logic Layer                    │
-│  ┌─────────────────────────────────────────┐            │
-│  │ Services (Repositories + State Mgmt)     │            │
-│  │ - SubscriptionService (finance)         │            │
-│  │ - RouteService (state updates)          │            │
-│  │ - NotificationService (push/email)      │            │
-│  │ - AuthService (OTP, roles)              │            │
-│  │ - FinancialService (ACID transactions)  │            │
-│  └─────────────────────────────────────────┘            │
-├─────────────────────────────────────────────────────────┤
-│                    API Layer                             │
-│  ┌──────────────────────┬──────────────────────┐        │
-│  │ REST/GraphQL APIs    │ Supabase Realtime    │        │
-│  │ - Auth Endpoints     │ - State subscriptions│        │
-│  │ - CRUD Operations    │ - Notifications      │        │
-│  │ - Financial Ops      │ - Updates            │        │
-│  └──────────────────────┴──────────────────────┘        │
-├─────────────────────────────────────────────────────────┤
-│                  Data Access Layer                       │
-│  ┌───────────────────────────────────────────┐          │
-│  │ Supabase SDK / Repository Pattern         │          │
-│  │ - User Repository                         │          │
-│  │ - Student Repository                      │          │
-│  │ - Driver Repository                       │          │
-│  │ - Route Repository                        │          │
-│  │ - Subscription/Payment Repository         │          │
-│  │ - Notification Repository                 │          │
-│  └───────────────────────────────────────────┘          │
-├─────────────────────────────────────────────────────────┤
-│              Database & External Services                │
-│  ┌──────────────┬──────────────┬────────────────┐       │
-│  │ PostgreSQL   │ Supabase     │ Push Service   │       │
-│  │ (Supabase)   │ Auth         │ (FCM/APNS)     │       │
-│  │ - Tables     │ - OTP        │ - Notifications│       │
-│  │ - RLS        │ - Session    │                │       │
-│  │ - Functions  │              │                │       │
-│  └──────────────┴──────────────┴────────────────┘       │
-└─────────────────────────────────────────────────────────┘
-```
+### Frontend (Mobile App)
+- **Framework**: Expo (React Native)
+- **Language**: TypeScript
+- **Navigation**: Expo Router
+- **State Management**: Zustand + TanStack React Query
+- **Maps & Location**: react-native-maps, expo-location
+- **Styling**: NativeWind / StyleSheet
+
+### Backend / BaaS
+- **Database**: Supabase (PostgreSQL 17)
+- **Authentication**: Supabase Auth (Phone OTP)
+- **Storage**: Supabase Storage (Receipt images)
+- **Realtime**: Supabase Realtime (Status updates)
+- **Edge Functions**: Supabase Edge Functions (Push notifications)
+
+### Development Tools
+- **Package Manager**: npm / yarn
+- **Type Checking**: TypeScript
+- **Linting**: ESLint
+- **Testing**: Jest + React Native Testing Library
 
 ---
 
-## 🎯 Component Architecture
+## Architecture Patterns
 
-### 1. Mobile App (Expo / React Native)
-**Purpose:** Unified application for both students and drivers
-**Language:** Arabic (RTL-first)
-
-#### Student Features
-- Login via OTP (phone-based)
-- View assigned route & driver details
-- Track real-time route status (via Realtime subscriptions)
-  - Driver approaching → Green
-  - Driver waiting at door → Yellow
-  - Student in transit → Blue
-  - Arrived at school → Completed
-- View subscription history & balance
-- Apply referral codes
-- Contact driver
-
-#### Driver Features
-- Login via OTP
-- View daily routes & assigned students
-- Manual state transitions:
-  1. **Start Route** → Route state changes to `active`
-  2. **Arrived at Door** → Student state changes to `driver_waiting`
-  3. **Picked Up / Absent** → Student state to `in_transit` or `absent`
-  4. **Arrived at Destination** → Route state to `completed`
-- Track daily earnings
-- View payment history
-
-#### Technical Stack
-- **Framework:** Expo (React Native)
-- **State Management:** Zustand (lightweight) or Redux (if complex)
-- **API Client:** React Query + Supabase JS SDK
-- **Realtime:** Supabase Realtime subscriptions
-- **Push Notifications:** React Native Firebase / Expo Notifications
-- **Localization:** i18n (Arabic/English) with RTL support
-- **Styling:** NativeWind or Tailwind for RN
-
-**Testing:** Jest + React Native Testing Library
-
----
-
-### 2. Web Admin Dashboard (Next.js 14+)
-**Purpose:** Administrative control, CRUD operations, financial reporting
-**Language:** Arabic (RTL-first)
-
-#### Admin Screens
-- **Dashboard:** Overview of students, drivers, routes, revenue
-- **User Management:**
-  - Create/edit students
-  - Create/edit drivers
-  - Assign roles (student, driver, admin)
-  - Approve drivers
-- **Route Management:**
-  - Create/assign routes to drivers
-  - View daily routes
-  - Monitor route status
-- **Subscription Management:**
-  - View student subscriptions
-  - Apply discounts
-  - Process manual payments
-- **Financial Reports:**
-  - Monthly revenue by driver
-  - Commission tracking
-  - Referral tracking
-  - Outstanding payments
-- **School Management:**
-  - CRUD schools
-  - Define pickup/dropoff locations
-- **Settings:**
-  - Rate configuration
-  - Notification templates
-  - System configuration
-
-#### Technical Stack
-- **Framework:** Next.js 14+ (App Router)
-- **Backend:** Server Actions + API Routes
-- **Database Client:** Supabase SDK (with service_role key for admin actions)
-- **Authentication:** Next.js Auth (JWT from Supabase)
-- **UI Library:** React + Tailwind CSS
-- **Form Handling:** React Hook Form + Zod validation
-- **Tables/Charts:** Tanstack React Table + Recharts/Chart.js
-- **Localization:** i18n-next (RTL support)
-
-**Testing:** Jest + React Testing Library + Playwright (E2E)
-
----
-
-### 3. Backend Services (Supabase)
-**Purpose:** Data persistence, authentication, real-time updates, financial transactions
-
-#### Components
-
-##### 3a. PostgreSQL Database
-- 15+ tables with strict FK constraints
-- RLS policies for row-level access control
-- Stored procedures for ACID financial transactions
-- Indexes for query performance
-- Auto-updating timestamp triggers
-
-##### 3b. Supabase Authentication
-- OTP-based login (phone number)
-- JWT token management
-- Role management (student, driver, admin)
-- Session handling
-
-##### 3c. Supabase Realtime
-- Route state subscriptions (students listening to driver updates)
-- Notification subscriptions
-- Live student list for drivers
-
-##### 3d. Supabase Edge Functions
-- Push notification trigger
-- Payment processing webhooks
-- Background job processing (if needed)
-
-##### 3e. Stored Procedures (PL/pgSQL)
-- `process_subscription_payment()` - ACID financial transaction
-- `apply_referral_code()` - Atomic discount application
-- `complete_route()` - Route completion with financial settlement
-
----
-
-## 🔐 Security Architecture
-
-### Authentication Flow
-```
-User Phone Number
-    ↓
-OTP Generation (via Supabase Auth)
-    ↓
-OTP Verification
-    ↓
-JWT Token Issued
-    ↓
-Stored in Device SecureStorage (mobile) / HttpOnly Cookie (web)
-    ↓
-All API calls include JWT Authorization header
-```
-
-### Authorization (RLS Policies)
+### 1. Clean Architecture
 ```
 ┌─────────────────────────────────────────┐
-│ Request with JWT + User ID              │
-├─────────────────────────────────────────┤
-│ RLS Policy Check:                       │
-│ - Is this user allowed to READ table?   │
-│ - Is this user allowed to UPDATE row?   │
-├─────────────────────────────────────────┤
-│ Allow or Deny based on Role + Row Data  │
+│           Presentation Layer              │
+│  (UI Components, Screens, Navigation)    │
+└─────────────────────────────────────────┘
+                    ↓
+┌─────────────────────────────────────────┐
+│         Business Logic Layer             │
+│  (Custom Hooks, Services, State)         │
+└─────────────────────────────────────────┘
+                    ↓
+┌─────────────────────────────────────────┐
+│           Data Access Layer              │
+│  (Repository Pattern, Supabase Client)  │
+└─────────────────────────────────────────┘
+                    ↓
+┌─────────────────────────────────────────┐
+│            Infrastructure Layer           │
+│  (Supabase, Storage, Auth, Realtime)     │
 └─────────────────────────────────────────┘
 ```
 
-### Financial Security (ACID Transactions)
+### 2. Repository Pattern
+All database interactions go through repository classes:
+- `UserRepository`: User data operations
+- `SubscriptionRepository`: Subscription management
+- `AttendanceRepository`: Attendance tracking
+- `DriverLocationRepository`: Location updates
+- `StudentDriverLinkRepository`: Student-driver relationships
+
+### 3. Separation of Concerns (SoC)
+- **UI Components**: Pure presentation logic
+- **Custom Hooks**: Business logic and state management
+- **Services**: Complex business operations
+- **Repositories**: Data access abstraction
+
+---
+
+## Project Structure
+
 ```
-SQL TRANSACTION:
-  1. BEGIN;
-  2. Lock subscription row
-  3. Validate amount
-  4. Insert payment record
-  5. Update driver commission
-  6. Update student balance
-  7. COMMIT or ROLLBACK (all-or-nothing)
+masari/
+├── app/                          # Expo Router pages
+│   ├── (auth)/                  # Authentication screens
+│   │   ├── _layout.tsx
+│   │   ├── index.tsx            # Phone input
+│   │   └── otp.tsx              # OTP verification
+│   ├── (student_tabs)/          # Student tab navigation
+│   │   ├── _layout.tsx
+│   │   ├── home.tsx
+│   │   ├── subscription.tsx
+│   │   └── attendance.tsx
+│   ├── (driver_tabs)/           # Driver tab navigation
+│   │   ├── _layout.tsx
+│   │   ├── home.tsx
+│   │   ├── students.tsx
+│   │   └── route.tsx
+│   ├── role-selection.tsx       # Role selection screen
+│   └── _layout.tsx               # Root layout
+├── components/                   # Reusable UI components
+│   ├── common/                  # Shared components
+│   ├── student/                 # Student-specific components
+│   └── driver/                  # Driver-specific components
+├── hooks/                       # Custom React hooks
+│   ├── useAuth.ts              # Authentication logic
+│   ├── useSubscription.ts      # Subscription management
+│   ├── useAttendance.ts        # Attendance tracking
+│   ├── useLocation.ts          # Location polling
+│   └── usePushNotifications.ts # Push notifications
+├── services/                    # Business logic services
+│   ├── AuthService.ts
+│   ├── SubscriptionService.ts
+│   ├── AttendanceService.ts
+│   ├── LocationService.ts
+│   └── NotificationService.ts
+├── repositories/                # Data access layer
+│   ├── UserRepository.ts
+│   ├── SubscriptionRepository.ts
+│   ├── AttendanceRepository.ts
+│   ├── DriverLocationRepository.ts
+│   └── StudentDriverLinkRepository.ts
+├── store/                       # Zustand stores
+│   ├── authStore.ts
+│   ├── subscriptionStore.ts
+│   └── attendanceStore.ts
+├── types/                       # TypeScript types
+│   ├── Database.ts             # Supabase generated types
+│   ├── models.ts               # Application models
+│   └── api.ts                  # API response types
+├── utils/                       # Utility functions
+│   ├── formatters.ts
+│   ├── validators.ts
+│   └── constants.ts
+├── lib/                         # External library configs
+│   ├── supabase.ts             # Supabase client
+│   └── navigation.ts           # Navigation helpers
+├── docs/                        # Documentation
+│   ├── database_schema.md
+│   └── system_architecture.md
+├── assets/                      # Static assets
+│   ├── images/
+│   └── fonts/
+├── package.json
+├── tsconfig.json
+├── app.json
+└── README.md
 ```
 
 ---
 
-## 📡 API Layer
+## Core Features Implementation
 
-### Authentication Endpoints
-- `POST /auth/otp/send` → Send OTP to phone
-- `POST /auth/otp/verify` → Verify OTP, return JWT
-- `POST /auth/logout` → Invalidate session
+### 1. Authentication Flow
 
-### Student Endpoints
-- `GET /students/me` → Get own profile
-- `GET /students/me/route` → Get current route assignment
-- `GET /students/me/subscriptions` → Get subscription history
-- `POST /students/referral/apply` → Apply referral code
-- `GET /students/notifications` → Get notification history
+#### Student Flow
+```
+Phone Input → OTP Verification → Role Selection → Student Dashboard
+```
 
-### Driver Endpoints
-- `GET /drivers/me` → Get own profile
-- `GET /drivers/me/routes/today` → Get today's routes
-- `GET /drivers/routes/:id/assignments` → Get students on route
-- `POST /drivers/routes/:id/start` → Start route
-- `POST /drivers/routes/:id/complete` → Complete route
-- `POST /drivers/assignments/:id/pickup` → Mark picked up
-- `POST /drivers/assignments/:id/absent` → Mark absent
-- `GET /drivers/me/earnings` → Get daily/monthly earnings
+#### Driver Flow
+```
+Phone Input → OTP Verification → Role Selection → Driver Dashboard
+```
 
-### Admin Endpoints
-- `POST /admin/users` → Create user
-- `GET /admin/users` → List users
-- `PUT /admin/users/:id` → Update user
-- `DELETE /admin/users/:id` → Soft delete user
-- `POST /admin/subscriptions/:id/apply-discount` → Apply discount
-- Similar CRUD for students, drivers, routes, schools, etc.
+#### Implementation Details
+- **Phone Auth**: Supabase Auth with OTP
+- **Session Management**: Supabase Auth session
+- **Role Assignment**: User selects role after first login
+- **Persistence**: Secure storage for session tokens
 
-### Realtime Subscriptions
-- `route-assignments:route_id` → Subscribe to route state changes
-- `notifications:user_id` → Subscribe to new notifications
-- `drivers:driver_id` → Subscribe to driver location updates
+### 2. Subscription Management
+
+#### Student Side
+1. Student uploads receipt image to Supabase Storage
+2. Creates subscription record with `status: 'pending'`
+3. Waits for driver approval
+4. Receives notification when approved
+
+#### Driver Side
+1. Views pending subscriptions
+2. Reviews receipt image
+3. Approves or rejects subscription
+4. If approved, sets `start_date` and `end_date` (30 days)
+
+#### Implementation Details
+- **File Upload**: Supabase Storage with bucket `receipts`
+- **Status Updates**: Supabase Realtime for live updates
+- **Notifications**: Push notifications via Edge Functions
+- **Validation**: Image format and size validation
+
+### 3. Location Polling
+
+#### Smart Polling Strategy
+```
+Normal Mode: Every 5-10 minutes
+Near Student: Every 1 minute
+```
+
+#### Distance Calculation
+```typescript
+function shouldIncreasePolling(driverLat, driverLng, studentLat, studentLng) {
+  const distance = calculateDistance(driverLat, driverLng, studentLat, studentLng);
+  return distance < 500; // 500 meters threshold
+}
+```
+
+#### Implementation Details
+- **Location Updates**: `expo-location` for GPS
+- **Polling Logic**: Custom hook with dynamic intervals
+- **Database Storage**: `driver_locations` table
+- **Optimization**: Background task management
+
+### 4. Attendance Management
+
+#### Driver Flow
+1. Driver taps "Start Route" → Updates route state to `active`
+2. Driver taps "Arrived at Door" → Updates student state to `driver_waiting`
+3. Driver taps "Picked Up" → Updates student state to `in_transit`
+4. Driver taps "Arrived at Destination" → Updates student state to `completed`
+
+#### Student Flow
+1. Student taps "Mark Absent" → Updates state to `absent`
+2. Student disappears from driver's route list
+
+#### Implementation Details
+- **State Management**: Zustand for local state
+- **Realtime Updates**: Supabase Realtime subscriptions
+- **Push Notifications**: Edge Functions for status changes
+- **History Tracking**: `daily_attendance` table
 
 ---
 
-## 💰 Financial Flow
+## Data Flow Diagrams
 
-### Subscription Payment Flow
+### Subscription Approval Flow
 ```
-Student registers and gets monthly subscription → 90,000 IQD
-
-                    ↓
-            
-        Payment processor (or manual entry)
-        
-                    ↓
-        
-    process_subscription_payment() ACID Transaction:
-    - Validate subscription
-    - Create payment record
-    - Company gets: 20,000 IQD (commission)
-    - Driver gets: 70,000 IQD (added to net_profit)
-    - Update financial_summaries
-    
-                    ↓
-        
-    Student receives "Payment Confirmed" notification
-    Driver receives earnings update notification
+Student App                    Supabase                    Driver App
+    |                            |                            |
+    |-- Upload Receipt -------->|                            |
+    |                            |-- Store Image ------------>|-- Review Receipt
+    |                            |                            |
+    |                            |<-- Approve/Reject ---------|
+    |<-- Notification -----------|                            |
+    |                            |                            |
+    |-- Update Status ---------->|                            |
+    |                            |-- Realtime Update -------->|
 ```
 
-### Referral Discount Flow
+### Location Polling Flow
 ```
-Student A (referring) shares referral code with Student B
-
-                    ↓
-        
-    Student B applies code during subscription
-    
-                    ↓
-        
-    apply_referral_code() ACID Transaction:
-    - Validate code (active, has usage left)
-    - Create subscription with 5,000 IQD discount
-    - Final price: 85,000 IQD (instead of 90,000)
-    - Increment code usage count
-    - Update Student A's referral stats
-    
-                    ↓
-    
-    Both students notified of successful referral
+Driver App                    Supabase                    Student App
+    |                            |                            |
+    |-- Get Location ---------->|                            |
+    |                            |-- Store Location ---------->|
+    |                            |                            |
+    |<-- Check Distance --------|                            |
+    |                            |                            |
+    |-- Adjust Polling Rate --->|                            |
+    |                            |                            |
+    |<-- Realtime Update -------|                            |
 ```
 
----
-
-## 🔄 State Management
-
-### Route States
+### Attendance Update Flow
 ```
-inactive → active → completed
-           ↓
-        cancelled
-```
-
-### Student (Route Assignment) States
-```
-pending → driver_waiting → in_transit → completed
-   ↓                          ↓
-absent                     (automatic)
-```
-
-### Subscription States
-```
-pending → paid → (monthly renewal)
-   ↓
-cancelled / refunded
-```
-
----
-
-## 📊 Data Flow Example: Driver Picks Up Student
-
-```
-1. Driver taps "Picked Up" button on Student Card
-   └─ Mobile App calls: POST /drivers/assignments/:id/pickup
-   
-2. Backend updates route_assignments.status = 'in_transit'
-   └─ Database triggers updated_at
-   
-3. Supabase Realtime publishes change to "route-assignments:route_id"
-   
-4. Student's app receives real-time update
-   └─ UI changes color from Yellow to Blue
-   └─ Shows notification: "تم التقاطك من قبل السائق"
-   
-5. Notification Queue triggered
-   └─ Creates notification record for student
-   └─ Edge Function sends push notification
-   └─ Student receives: "Driver started driving you to school"
+Driver App                    Supabase                    Student App
+    |                            |                            |
+    |-- Update Status ---------->|                            |
+    |                            |-- Realtime Update -------->|
+    |                            |                            |
+    |                            |<-- Notification -----------|
+    |                            |                            |
+    |                            |-- Update UI --------------->|
 ```
 
 ---
 
-## 🧪 Testing Strategy
+## Security Considerations
 
-### Unit Tests
-- Repository layer logic
-- Service layer business rules
-- Financial calculation accuracy
-- Validation functions
+### 1. Authentication
+- Phone-based authentication with OTP
+- Secure session management
+- Token refresh handling
 
-### Integration Tests
-- API endpoint flows (E2E request → database → response)
-- ACID transaction correctness
-- Concurrent transaction handling
-- RLS policy enforcement
+### 2. Data Access
+- Row Level Security (RLS) on all tables
+- User-specific data isolation
+- No cross-user data access
 
-### E2E Tests
-- Student login → view route → see driver → receive notification
-- Driver login → start route → pickup student → complete route → earn money
-- Admin dashboard CRUD operations
+### 3. API Security
+- Supabase client with proper keys
+- Anon key for client-side operations
+- Service role key for admin operations
 
----
-
-## 🚀 Deployment Architecture
-
-### Development Environment
-```
-Local Machine:
-- Supabase Local (Docker)
-- Next.js Dev Server (http://localhost:3000)
-- Expo Dev Server
-- Jest test runner
-```
-
-### Staging Environment
-```
-Supabase Staging Project
-- Staging database
-- Staging auth configuration
-- All staging secrets in .env.staging
-```
-
-### Production Environment
-```
-Supabase Production Project
-- PostgreSQL (Managed)
-- Production authentication
-- SSL/TLS enabled
-- Backups enabled
-- RLS policies enforced
-- Edge functions deployed
-```
+### 4. Storage Security
+- Private storage buckets
+- Signed URLs for image access
+- File size and type validation
 
 ---
 
-## 📋 Deployment Checklist
+## Performance Optimization
 
-- [ ] Database schema migrated
-- [ ] RLS policies enforced
-- [ ] Stored procedures deployed
-- [ ] Indexes created for performance
-- [ ] Supabase Auth configuration (OTP settings)
-- [ ] Push notification service configured
-- [ ] Environment variables secured (.env.local, .env.production)
-- [ ] Mobile app built and released
-- [ ] Web dashboard deployed
-- [ ] Admin account created
-- [ ] Seed data loaded (schools, sample routes)
-- [ ] Smoke tests passed
-- [ ] Performance tested
-- [ ] Security audit completed
+### 1. Database
+- Indexed columns for fast queries
+- Optimized RLS policies
+- Connection pooling
 
----
+### 2. Mobile App
+- Lazy loading of screens
+- Image caching
+- Background task optimization
 
-## 🛠️ Technology Stack Summary
-
-| Layer | Technology |
-|-------|-----------|
-| **Mobile** | React Native / Expo |
-| **Web** | Next.js 14+, React, Tailwind CSS |
-| **Backend** | Supabase (PostgreSQL, Auth, Realtime) |
-| **API** | REST / Supabase Realtime |
-| **Authentication** | Supabase Auth (OTP) |
-| **Database** | PostgreSQL (managed by Supabase) |
-| **Push Notifications** | FCM (Android) / APNS (iOS) / Expo |
-| **Testing** | Jest, React Testing Library, Playwright |
-| **Language** | Arabic (Primary), English (Secondary) |
-| **Localization** | i18n-next, React Native i18n |
+### 3. Realtime
+- Selective subscriptions
+- Debounced updates
+- Offline support
 
 ---
 
-## ✅ Next Steps (Step 2 & 3)
+## Error Handling
 
-**Step 2:** Supabase Project Configuration
-- Create Supabase project
-- Deploy database schema
-- Configure RLS policies
-- Set up authentication
-- Deploy Edge Functions
+### 1. Network Errors
+- Retry logic with exponential backoff
+- Offline mode support
+- User-friendly error messages
 
-**Step 3:** Monorepo Setup
-- Initialize monorepo structure (pnpm workspaces or yarn)
-- Setup Expo app with testing
-- Setup Next.js dashboard with testing
-- Write dummy tests to verify test suite runs
-- Configure CI/CD (GitHub Actions)
+### 2. Validation Errors
+- Form validation before submission
+- Clear error messages
+- Input sanitization
 
-**Status:** ⏳ Awaiting approval before proceeding to Step 2
+### 3. Business Logic Errors
+- Transaction rollback on failure
+- Consistent state management
+- Error logging
+
+---
+
+## Testing Strategy
+
+### 1. Unit Tests
+- Repository methods
+- Service functions
+- Utility functions
+
+### 2. Integration Tests
+- API endpoints
+- Database operations
+- Authentication flow
+
+### 3. E2E Tests
+- User flows
+- Critical paths
+- Error scenarios
+
+---
+
+## Deployment
+
+### 1. Mobile App
+- Expo EAS Build
+- App Store (iOS)
+- Play Store (Android)
+
+### 2. Backend
+- Supabase Cloud
+- Edge Functions deployment
+- Storage bucket configuration
+
+### 3. CI/CD
+- GitHub Actions
+- Automated testing
+- Deployment pipelines
+
+---
+
+## Monitoring & Logging
+
+### 1. Application Logs
+- Error tracking
+- Performance metrics
+- User activity
+
+### 2. Database Logs
+- Query performance
+- Slow query detection
+- Connection monitoring
+
+### 3. User Analytics
+- Feature usage
+- Error rates
+- Performance metrics
+
+---
+
+## Future Enhancements
+
+### 1. Advanced Features
+- Live GPS tracking (optional)
+- Route optimization
+- Multi-stop routes
+- Payment integration
+
+### 2. Admin Dashboard
+- Web-based admin panel
+- User management
+- Analytics dashboard
+- Revenue tracking
+
+### 3. Notifications
+- In-app notifications
+- Email notifications
+- SMS notifications
+
+---
+
+## Documentation
+
+### Code Documentation
+- JSDoc comments for functions
+- TypeScript types for interfaces
+- README for each module
+
+### API Documentation
+- Supabase API reference
+- Edge Functions documentation
+- Storage API reference
+
+### User Documentation
+- User guide
+- Driver guide
+- FAQ section
+
+---
+
+## Development Guidelines
+
+### 1. Code Style
+- TypeScript strict mode
+- ESLint configuration
+- Prettier formatting
+
+### 2. Git Workflow
+- Feature branches
+- Pull request reviews
+- Semantic versioning
+
+### 3. Code Review
+- Peer review required
+- Automated checks
+- Security review
+
+---
+
+## Conclusion
+
+This architecture provides a solid foundation for building a scalable, maintainable, and secure transportation management system. The clean separation of concerns, repository pattern, and comprehensive error handling ensure the application can grow and evolve over time.

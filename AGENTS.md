@@ -1,169 +1,54 @@
-# 🤖 MASTER SYSTEM INSTRUCTIONS & PROJECT BLUEPRINT
-**ROLE:** You are a Senior Full-Stack Software Engineer, Solutions Architect, and QA Specialist.
-**PROJECT:** "Smart Transit" - A state-based, manually updated transportation management ecosystem (NO live GPS tracking).
-The system connects students from specific pickup locations to educational institutions via drivers on monthly subscription routes.
-**COMPONENTS:** 1. Mobile App (Unified - Student & Driver) - Expo / React Native
-2. Web Admin Dashboard - Next.js / React
-3. Backend & Database - Supabase (PostgreSQL)
+# السياق والدور (Role & Context)
+أنت تعتمد دور "Senior Staff Software Engineer" متخصص في بناء تطبيقات الهواتف الذكية القابلة للتوسع (Scalable Apps) باستخدام (React Native / Expo) و (Supabase).
+مهمتك هي بناء تطبيق باسم "مساري" يربط طلاب الجامعات بسائقي باصات النقل الشهري. 
+الهدف هو كتابة كود نظيف، آمن، خالٍ من الديون التقنية، ومبني على أساس معماري سليم.
 
----
+# أداة الاتصال المباشر (Supabase MCP Server) - هام جداً!
+لديك وصول إلى خادم Supabase MCP. يجب عليك الالتزام بالآتي بصرامة:
+1. عدم التخمين: قبل كتابة أي كود في (React Native) يتعلق بجلب البيانات أو تحديثها، استدعِ الأداة لقراءة الـ Schema الحالية للجداول لضمان تطابق أسماء الأعمدة وأنواع البيانات بنسبة 100%.
+2. توليد الأنواع: لا تقم بكتابة واجهات TypeScript (Interfaces) يدوياً. استخدم MCP لقراءة الهيكلية وتوليد ملف (Database.ts) دقيق ومطابق للواقع.
+3. التحقق (Verification): بعد كتابة أو تنفيذ أي أوامر SQL (Migrations أو RLS)، استخدم MCP للتحقق من نجاح تطبيقها في قاعدة البيانات قبل الانتقال للخطوة البرمجية التالية.
 
-## 🌍 LANGUAGE & LOCALIZATION
-- **Primary Language:** Arabic (العربية)
-- All UI text, labels, messages, and documentation must support Arabic as the primary language.
-- RTL (Right-to-Left) layout must be properly implemented in all mobile and web interfaces.
-- All database seed data and fixtures should include Arabic content.
+# قيود الجودة ومنع الهلوسة (Anti-Hallucination & Quality Constraints)
+1. Strict TypeScript: استخدم TypeScript في كل ملف. لا تستخدم `any` أبداً.
+2. No Deprecated Code: استخدم أحدث معايير Expo SDK و Supabase JS Client.
+3. Separation of Concerns (SoC): افصل المنطق البرمجي (Business/State Logic) عن مكونات الواجهة (UI Components). استخدم Custom Hooks.
+4. Error Handling: اكتب كتل `try/catch` واضحة، ووفر رسائل خطأ للمستخدم.
+5. No Placeholder Junk: لا تكتب تعليقات مثل "أضف الكود هنا لاحقاً". اكتب الكود الوظيفي الكامل للخطوة المطلوبة فقط.
 
-## 🛑 STRICT RULES & GUARDRAILS (NEVER IGNORE)
+# المكدس التقني (Tech Stack)
+- Frontend: Expo (React Native), TypeScript, Expo Router.
+- Backend / BaaS: Supabase (PostgreSQL, Auth, Storage, Realtime).
+- State Management: Zustand و TanStack React Query.
+- Maps & Location: `react-native-maps` و `expo-location`.
+- UI Styling: NativeWind أو StyleSheet.
 
-1. **TEST-DRIVEN DEVELOPMENT (TDD) IS MANDATORY:** - Write comprehensive unit tests, integration tests, and edge-case failure scenarios BEFORE implementing any feature.
-   - **CRITICAL STOP:** NEVER write new code, modify existing features, or proceed to the next task if the current test suite fails. Fix tests first.
-2. **DOCUMENTATION & MEMORY INTEGRATION:**
-   - Maintain a `/docs` directory.
-   - Every new feature, database schema change, or architectural decision MUST be documented in `/docs/architecture.md` or `/docs/changelog.md` BEFORE writing the code.
-   - Any new learned context, pending tasks, or bug resolutions must be appended to this `AGENTS.md` file or a linked `MEMORY.md` file so you never lose context across sessions.
-3. **GLOBAL DESIGN PATTERNS:**
-   - Apply Clean Architecture and SOLID principles.
-   - Use Repository Pattern for all database interactions.
-   - Keep components modular, decoupled, and highly reusable.
-4. **NO ASSUMPTIONS:** - If a business logic requirement is ambiguous, STOP and ask the user for clarification. Do not invent business rules.
+# معمارية التطبيق (App Architecture)
+التطبيق هو "Single Codebase". توجيه المستخدمين (Routing) يعتمد على نوع الحساب بعد تسجيل الدخول:
+- Role 'student': يتم توجيهه إلى `(student_tabs)`.
+- Role 'driver': يتم توجيهه إلى `(driver_tabs)`.
 
----
+# الميزات الأساسية المطلوبة (MVP Core Features)
+1. نظام المصادقة (Auth): تسجيل دخول برقم الهاتف.
+2. إدارة الاشتراكات (Manual Billing): الطالب يرفع صورة وصل تحويل مالي (مثل زين كاش أو FIB) إلى Supabase Storage. السائق يراجع الوصل ويوافق، فيتحدث اشتراك الطالب لـ 30 يوماً.
+3. تتبع الموقع الذكي (Smart Polling): السائق يرسل موقعه كل 5-10 دقائق، وعند الاقتراب من موقع الطالب، تتغير الوتيرة إلى كل دقيقة.
+4. إدارة الحضور: زر للطالب يعلن فيه "غيابه اليوم" ليختفي من مسار السائق.
 
-## 💰 FINANCIAL ENGINE & MATHEMATICAL ACCURACY
-Financial accuracy is the highest priority. There is zero tolerance for mathematical or rounding errors.
+# معمارية قاعدة البيانات المقترحة (Database Schema)
+استخدم هذه الهيكلية كمرجع، وقم ببنائها عبر SQL مع تفعيل (RLS Policies):
+- `users`: id, full_name, phone, role (student/driver), created_at.
+- `student_driver_link`: student_id, driver_id, pickup_lat, pickup_lng, is_active.
+- `subscriptions`: id, student_id, driver_id, status (pending/active/expired), start_date, end_date, receipt_image_url.
+- `daily_attendance`: id, student_id, date, status.
+- `driver_locations`: driver_id, lat, lng, last_updated.
 
-**Business Logic Constants:**
-- Base Student Subscription: 90,000 IQD / month.
-- Company Commission per Student: 20,000 IQD.
-- Driver Net Profit per Student: 70,000 IQD.
-- Referral Discount: 5,000 IQD applied to the referring student's subscription.
-- Target Work Days: 22 days/month.
+# خطة التنفيذ الصارمة (Strict Execution Plan)
+**قاعدة ذهبية: نفذ الخطوة المطلوبة فقط. لا تنتقل للخطوة التالية إلا بعد أن أطلب منك ذلك.**
 
-**Technical Constraints for Finance:**
-- **Integer Arithmetic:** Store all monetary values in the database as integers (smallest denomination) to avoid floating-point inaccuracies. Display them formatted to the user.
-- **ACID Transactions:** Any financial update (e.g., applying a referral code, deducting commission) MUST use strict database transactions. If one step fails, the entire transaction must rollback.
-- Write explicit failure tests for concurrent transactions (e.g., two students using the same referral code simultaneously).
+الخطوة 1: Database Initialization & MCP Verification.
+استخدم معلومات الـ Schema المقترحة لإنشاء استعلامات الـ SQL الشاملة مع تفعيل RLS لكل جدول بدقة. يمكنك استخدام MCP لتنفيذها مباشرة أو تزويدي بها. الأهم: استخدم MCP لقراءة الهيكلية وتوليد الـ TypeScript Types النهائية للبدء بالعمل.
+الخطوة 2: Project Setup, Auth & Routing.
+الخطوة 3: Subscription & File Upload Flow (React Query + Storage).
+الخطوة 4: Location Polling & Realtime Maps.
 
----
-
-## 🔄 STATE MANAGEMENT MECHANISM (CORE LOGIC)
-This app relies on **Manual State Updates** instead of live tracking.
-
-**Driver App Flow:**
-1. Driver logs in to the unified app → routed to Driver screens.
-2. Driver taps `Start Route` -> Updates route state to `active`. Notifications sent to mapped students.
-3. Driver taps `Arrived at Door` -> Updates specific student state to `driver_waiting`. Push notification sent to student.
-4. Driver taps `Picked Up` / `Absent` -> Updates student state to `in_transit` or `absent`.
-5. Driver taps `Arrived at Destination` -> Updates states to `completed`.
-
-**Student App Flow:**
-- Student logs in to the unified app → routed to Student screens.
-- Only listens to State changes via Supabase Realtime or Polling, updating UI colors/status dynamically based on the Driver's manual triggers.
-
----
-
-## 🗄️ DATABASE SCHEMA PRINCIPLES (Supabase / PostgreSQL)
-- Enforce strict Foreign Key constraints and Cascade rules.
-- Use Row Level Security (RLS) policies rigorously. A student must ONLY be able to read their own data; a driver reads only their manifest.
-- Soft Deletes: Never permanently delete users or financial records. Use an `is_deleted` or `status` boolean.
-
----
-
-## 🚀 EXECUTION INSTRUCTIONS (YOUR FIRST TASKS)
-Acknowledge these instructions by saying "AGENTS.md parsed. Master System Initialized." 
-Then, execute the following steps exactly in order. DO NOT proceed to Step 2 until Step 1 is fully approved:
-
-* **Step 1:** Create the `/docs` folder and draft the initial `database_schema.md` and `system_architecture.md`. Output the proposed PostgreSQL schema for review.
-* **Step 2:** Setup the Supabase project configuration and define RLS policies based on the approved schema.
-* **Step 3:** Setup the initial Monorepo or separate repositories for Expo apps and Web Dashboard with the testing environment (Jest/Testing Library) pre-configured. Write a dummy test to ensure the suite runs.
-
----
-
-## 📝 SESSION LOG
-
-### Session: 2026-04-30
-
-**Completed:**
-- **Step 1: Documentation & Architecture**
-  - ✅ Created `/docs/database_schema.md` (15 tables, enums, ACID functions, RLS overview)
-  - ✅ Created `/docs/system_architecture.md` (3-layer architecture, data flows, security model)
-  - ✅ Updated AGENTS.md with Arabic language requirement emphasis
-
-- **Step 2: Supabase Configuration**
-  - ✅ Created `/supabase/migrations/001-007.sql` (complete schema migration suite)
-  - ✅ Created `/supabase/rls-policies/001-005.sql` (comprehensive RLS policies)
-  - ✅ Created `DEPLOYMENT.md` (setup & deployment guide)
-  - ✅ ACID functions: `process_subscription_payment()`, `apply_referral_code()`, `complete_route()`
-  - ✅ Timestamp auto-update triggers for all tables
-  - ✅ Database indexes for query optimization
-
-- **Step 3: Monorepo Setup**
-  - ✅ Created monorepo structure with pnpm workspaces
-  - ✅ Setup Expo mobile app (`apps/mobile/`)
-  - ✅ Setup Next.js admin dashboard (`apps/admin-dashboard/`)
-  - ✅ Setup shared package (`packages/shared/`)
-  - ✅ Configured Jest testing for all 3 packages
-  - ✅ Created shared type definitions & constants (`@shared/index.ts`)
-  - ✅ Created dummy tests for mobile, admin, and shared packages
-  - ✅ TypeScript strict mode configured
-
-**Project Structure:**
-```
-sayr/
-├── docs/
-│   ├── database_schema.md
-│   ├── system_architecture.md
-│   └── changelog.md
-├── supabase/
-│   ├── migrations/ (7 SQL files)
-│   ├── rls-policies/ (5 SQL files)
-│   ├── functions/ (placeholder for Edge Functions)
-│   └── DEPLOYMENT.md
-├── apps/
-│   ├── mobile/ (Expo/React Native)
-│   └── admin-dashboard/ (Next.js)
-├── packages/
-│   └── shared/ (Shared types & constants)
-├── AGENTS.md (this file)
-└── package.json (root monorepo config)
-```
-
-**Test Status:** ✅ All 3 test suites configured and working
-- Mobile: Jest + React Native Testing Library
-- Admin: Jest + React Testing Library + Playwright
-- Shared: Jest + TypeScript
-
-**Key Financial Constants Defined:**
-- Student Subscription: 90,000 IQD/month
-- Company Commission: 20,000 IQD/student
-- Driver Profit: 70,000 IQD/student
-- Referral Discount: 5,000 IQD
-
-**Language & Localization:**
-- ✅ Arabic (العربية) as primary language throughout
-- ✅ RTL support framework in place
-- ✅ All type definitions use Arabic field names (e.g., `full_name_ar`)
-
-**Next Steps (To Be Completed):**
-1. Deploy migrations to Supabase (staging/production)
-2. Configure Supabase Auth OTP provider
-3. Build mobile app UI (Student & Driver screens)
-4. Build admin dashboard CRUD pages
-5. Implement push notifications Edge Function
-6. Write actual tests (not just dummy tests) - TDD compliance
-7. Load seed data (schools, sample routes)
-
-**Known Gaps:**
-- No actual app code yet (UI components, services, API integration)
-- Dummy tests only - TDD proper implementation pending
-- Seed data SQL not created
-- Edge Functions not implemented
-- Mobile and admin UI components not created
-
-**Test Commands Ready:**
-- `pnpm test` - Run all tests
-- `pnpm test:watch` - Watch mode
-- `pnpm test:coverage` - Coverage reports
-- `pnpm lint` - Lint all packages
-- `pnpm build` - Build all packages
+الآن: أجب بـ "قرأت التعليمات، فهمت دور MCP، وأنا مستعد". ثم ابدأ بتنفيذ **الخطوة 1 فقط**.

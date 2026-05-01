@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "مساري",
+    "slug": "masari",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.masari.app"
+    },
+    "android": {
+      "package": "com.masari.app"
+    },
+    "web": {},
+    "plugins": [
+      "expo-router"
+    ]
+  }
+}

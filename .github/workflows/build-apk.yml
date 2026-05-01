@@ -21,7 +21,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
           cache: 'npm'
 
       - name: Install dependencies
@@ -36,6 +36,7 @@ jobs:
       - name: Prebuild Expo project
         env:
           EXPO_OFFLINE: 1
+          NODE_OPTIONS: --max-old-space-size=4096
         run: |
           rm -f eas.json
           npx expo prebuild --platform android
@@ -44,6 +45,8 @@ jobs:
         run: chmod +x android/gradlew
 
       - name: Build Android Release APK
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
         run: |
           cd android
           ./gradlew assembleRelease

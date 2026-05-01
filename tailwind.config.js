@@ -21,7 +21,5 @@ module.exports = {
       }
     },
   },
-  plugins: [
-    require('nativewind/babel'),
-  ],
+  plugins: [],
 }

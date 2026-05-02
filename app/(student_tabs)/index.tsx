@@ -1,16 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View, ActivityIndicator, Platform } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { AppButton } from '../../components/common/AppButton';
 import { AppTextInput } from '../../components/common/AppTextInput';
 import { EmptyState } from '../../components/common/EmptyState';
 import { Screen } from '../../components/common/Screen';
 import { Section } from '../../components/common/Section';
+import { StatusCard } from '../../components/common/ScreenHeader';
 import { useAuth } from '../../hooks/useAuth';
 import { useCurrentCoordinates } from '../../hooks/useLocationTracking';
 import { useInstitutions } from '../../hooks/useInstitutions';
 import { useStudentProfile, useUpsertStudentProfile } from '../../hooks/useProfiles';
 import { useStudentSubscriptions } from '../../hooks/useSubscriptions';
-import { colors } from '../../lib/theme';
+import { colors, radius, spacing, fontSize, fontWeight } from '../../lib/theme';
 import { userRepository } from '../../repositories/UserRepository';
 import { useAuthStore } from '../../store/authStore';
 import type { Institution } from '../../types/models';
@@ -56,9 +58,7 @@ export default function StudentHomeScreen() {
   };
 
   const handleSaveProfile = async () => {
-    if (!user?.id) {
-      return;
-    }
+    if (!user?.id) return;
 
     const lat = Number(pickupLat);
     const lng = Number(pickupLng);
@@ -80,9 +80,7 @@ export default function StudentHomeScreen() {
 
     try {
       const updatedUser = await userRepository.updateUser(user.id, { full_name: fullName.trim() });
-      if (updatedUser) {
-        setUser(updatedUser);
-      }
+      if (updatedUser) setUser(updatedUser);
 
       await upsertProfile.mutateAsync({
         user_id: user.id,
@@ -98,39 +96,79 @@ export default function StudentHomeScreen() {
     }
   };
 
-  const renderInstitutionOption = (institution: Institution) => (
-    <Pressable
-      key={institution.id}
-      onPress={() => setInstitutionId(institution.id)}
-      style={[
-        styles.option,
-        institutionId === institution.id && styles.optionSelected,
-      ]}
-    >
-      <Text style={[styles.optionTitle, institutionId === institution.id && styles.optionTitleSelected]}>
-        {institution.name}
-      </Text>
-      <Text style={styles.optionSubtitle}>{institution.city ?? 'بدون مدينة محددة'}</Text>
-    </Pressable>
-  );
+  const renderInstitutionOption = (institution: Institution) => {
+    const isSelected = institutionId === institution.id;
+    return (
+      <Pressable
+        key={institution.id}
+        onPress={() => setInstitutionId(institution.id)}
+        accessible={true}
+        accessibilityRole="button"
+        accessibilityState={{ selected: isSelected }}
+        accessibilityLabel={`${institution.name}, ${institution.city ?? 'بدون مدينة محددة'}`}
+        style={[styles.option, isSelected && styles.optionSelected]}
+      >
+        <View style={styles.optionContent}>
+          <View style={[styles.optionRadio, isSelected && styles.optionRadioSelected]}>
+            {isSelected && <View style={styles.optionRadioInner} />}
+          </View>
+          <View style={styles.optionTexts}>
+            <Text style={[styles.optionTitle, isSelected && styles.optionTitleSelected]}>
+              {institution.name}
+            </Text>
+            <Text style={styles.optionSubtitle}>{institution.city ?? 'بدون مدينة محددة'}</Text>
+          </View>
+        </View>
+      </Pressable>
+    );
+  };
+
+  const isLoading = institutions.isLoading || profile.isLoading || subscriptions.isLoading;
+  const isError = institutions.isError || profile.isError || subscriptions.isError;
+
+  if (isLoading) {
+    return (
+      <Screen>
+        <View style={styles.centerContainer} accessible accessibilityRole="progressbar">
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>جاري تحميل البيانات...</Text>
+        </View>
+      </Screen>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Screen>
+        <EmptyState title="حدث خطأ" message="تعذر تحميل بيانات الصفحة الرئيسية. يرجى المحاولة لاحقاً." icon="alert-circle-outline" />
+      </Screen>
+    );
+  }
 
   return (
     <Screen>
-      <View style={styles.header}>
-        <Text style={styles.greeting}>أهلاً {user?.full_name || 'بك'}</Text>
-        <Text style={styles.caption}>جهّز بياناتك مرة واحدة، وبعدها ستظهر لك السائقون المناسبون لمؤسستك.</Text>
+      <View style={styles.greetingSection}>
+        <View style={styles.avatarCircle}>
+          <Ionicons name="person" size={28} color={colors.primary} />
+        </View>
+        <View style={styles.greetingTexts}>
+          <Text style={styles.greeting}>أهلاً {user?.full_name || 'بك'}</Text>
+          <Text style={styles.caption}>جهّز بياناتك مرة واحدة، وبعدها ستظهر لك السائقون المناسبون لمؤسستك.</Text>
+        </View>
       </View>
 
       <Section title="حالة الاشتراك">
         {activeSubscription ? (
-          <View style={styles.statusBox}>
-            <Text style={styles.statusTitle}>اشتراك فعّال</Text>
-            <Text style={styles.statusText}>ينتهي في {activeSubscription.end_date ?? 'غير محدد'}</Text>
-          </View>
+          <StatusCard
+            title="اشتراك فعّال"
+            subtitle={`ينتهي في ${activeSubscription.end_date ?? 'غير محدد'}`}
+            variant="success"
+          />
         ) : (
           <EmptyState
             title="لا يوجد اشتراك فعّال"
             message="بعد حفظ بياناتك يمكنك طلب اشتراك من تبويب الاشتراك."
+            icon="receipt-outline"
           />
         )}
       </Section>
@@ -139,14 +177,24 @@ export default function StudentHomeScreen() {
         title="بيانات الطالب"
         subtitle="المؤسسة ونقطة الصعود هما ما يحددان السائقين الذين يمكنك الاشتراك معهم."
       >
-        <AppTextInput label="الاسم الكامل" value={fullName} onChangeText={setFullName} placeholder="مثال: علي أحمد" />
+        <AppTextInput
+          label="الاسم الكامل"
+          value={fullName}
+          onChangeText={setFullName}
+          placeholder="مثال: علي أحمد"
+          accessibilityLabel="أدخل الاسم الكامل"
+        />
 
-        <View style={styles.options}>
+        <Text style={styles.sectionLabel}>اختر المؤسسة</Text>
+        <View style={styles.options} accessibilityRole="radiogroup">
           {institutions.data?.map(renderInstitutionOption)}
         </View>
 
         {selectedInstitution ? (
-          <Text style={styles.selectedText}>المؤسسة المختارة: {selectedInstitution.name}</Text>
+          <View style={styles.selectedBadge}>
+            <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
+            <Text style={styles.selectedText}>{selectedInstitution.name}</Text>
+          </View>
         ) : null}
 
         <AppTextInput
@@ -154,14 +202,27 @@ export default function StudentHomeScreen() {
           value={pickupAddress}
           onChangeText={setPickupAddress}
           placeholder="مثال: قرب الباب الرئيسي للمنطقة"
+          accessibilityLabel="وصف نقطة الصعود"
         />
 
         <View style={styles.row}>
           <View style={styles.flex}>
-            <AppTextInput label="خط العرض" value={pickupLat} onChangeText={setPickupLat} keyboardType="decimal-pad" />
+            <AppTextInput
+              label="خط العرض"
+              value={pickupLat}
+              onChangeText={setPickupLat}
+              keyboardType="decimal-pad"
+              accessibilityLabel="خط العرض لنقطة الصعود"
+            />
           </View>
           <View style={styles.flex}>
-            <AppTextInput label="خط الطول" value={pickupLng} onChangeText={setPickupLng} keyboardType="decimal-pad" />
+            <AppTextInput
+              label="خط الطول"
+              value={pickupLng}
+              onChangeText={setPickupLng}
+              keyboardType="decimal-pad"
+              accessibilityLabel="خط الطول لنقطة الصعود"
+            />
           </View>
         </View>
 
@@ -170,68 +231,106 @@ export default function StudentHomeScreen() {
           onPress={handleUseCurrentLocation}
           loading={currentCoordinates.isPending}
           variant="secondary"
+          accessibilityHint="يحدث إحداثيات خط الطول والعرض لموقعك الحالي"
         />
-        <AppButton title="حفظ بيانات الطالب" onPress={handleSaveProfile} loading={upsertProfile.isPending} />
+        <AppButton
+          title="حفظ بيانات الطالب"
+          onPress={handleSaveProfile}
+          loading={upsertProfile.isPending}
+          accessibilityHint="يحفظ التغييرات على بياناتك الشخصية وموقع الصعود"
+        />
       </Section>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  header: {
-    gap: 8,
+  greetingSection: {
+    flexDirection: 'row-reverse',
+    gap: spacing.md,
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  avatarCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  greetingTexts: {
+    flex: 1,
+    gap: 2,
   },
   greeting: {
     color: colors.text,
-    fontSize: 26,
-    fontWeight: '900',
+    fontSize: fontSize.xxl,
+    fontWeight: fontWeight.black,
     textAlign: 'right',
     writingDirection: 'rtl',
   },
   caption: {
     color: colors.textMuted,
-    fontSize: 15,
-    lineHeight: 22,
+    fontSize: fontSize.sm,
+    lineHeight: 20,
     textAlign: 'right',
     writingDirection: 'rtl',
   },
-  statusBox: {
-    backgroundColor: '#E8F5EF',
-    borderRadius: 8,
-    gap: 4,
-    padding: 14,
-  },
-  statusTitle: {
-    color: colors.success,
-    fontSize: 18,
-    fontWeight: '900',
-    textAlign: 'right',
-    writingDirection: 'rtl',
-  },
-  statusText: {
+  sectionLabel: {
     color: colors.text,
-    fontSize: 14,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
     textAlign: 'right',
     writingDirection: 'rtl',
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
   },
   options: {
-    gap: 8,
+    gap: spacing.sm,
   },
   option: {
     backgroundColor: colors.surfaceMuted,
     borderColor: colors.border,
-    borderRadius: 8,
-    borderWidth: 1,
-    padding: 12,
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+    padding: spacing.md,
   },
   optionSelected: {
-    backgroundColor: '#E3F4F2',
+    backgroundColor: colors.primaryLight,
     borderColor: colors.primary,
+  },
+  optionContent: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  optionRadio: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  optionRadioSelected: {
+    borderColor: colors.primary,
+  },
+  optionRadioInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.primary,
+  },
+  optionTexts: {
+    flex: 1,
+    gap: 2,
   },
   optionTitle: {
     color: colors.text,
-    fontSize: 15,
-    fontWeight: '800',
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.bold,
     textAlign: 'right',
     writingDirection: 'rtl',
   },
@@ -240,23 +339,43 @@ const styles = StyleSheet.create({
   },
   optionSubtitle: {
     color: colors.textMuted,
-    fontSize: 13,
-    marginTop: 3,
+    fontSize: fontSize.xs,
     textAlign: 'right',
     writingDirection: 'rtl',
   },
+  selectedBadge: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.primaryLight,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginTop: spacing.sm,
+  },
   selectedText: {
     color: colors.primary,
-    fontSize: 14,
-    fontWeight: '700',
-    textAlign: 'right',
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
     writingDirection: 'rtl',
   },
   row: {
     flexDirection: 'row',
-    gap: 10,
+    gap: spacing.md,
   },
   flex: {
     flex: 1,
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+  },
+  loadingText: {
+    marginTop: spacing.md,
+    color: colors.textMuted,
+    fontSize: fontSize.md,
+    textAlign: 'center',
   },
 });

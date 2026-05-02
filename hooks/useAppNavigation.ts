@@ -7,10 +7,6 @@ export function useAppNavigation() {
     router.replace('/');
   };
 
-  const navigateToOTP = (phone: string) => {
-    router.push({ pathname: '/otp', params: { phone } });
-  };
-
   const navigateToRoleSelection = () => {
     router.replace('/role-selection');
   };
@@ -55,9 +51,20 @@ export function useAppNavigation() {
     router.push('/(driver_tabs)/profile');
   };
 
+  const navigateToResetPassword = () => {
+    router.push('/reset-password');
+  };
+
+  const navigateToSignup = () => {
+    router.push('/signup');
+  };
+
+  const goBack = () => {
+    router.back();
+  };
+
   return {
     navigateToAuth,
-    navigateToOTP,
     navigateToRoleSelection,
     navigateToStudentTabs,
     navigateToDriverTabs,
@@ -69,5 +76,8 @@ export function useAppNavigation() {
     navigateToDriverStudents,
     navigateToDriverRoute,
     navigateToDriverProfile,
+    navigateToResetPassword,
+    navigateToSignup,
+    goBack,
   };
 }

@@ -1,26 +1,28 @@
 import { useMemo, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View, ActivityIndicator, Platform } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { AppButton } from '../../components/common/AppButton';
 import { AppTextInput } from '../../components/common/AppTextInput';
 import { EmptyState } from '../../components/common/EmptyState';
 import { Screen } from '../../components/common/Screen';
 import { Section } from '../../components/common/Section';
+import { StatusCard } from '../../components/common/ScreenHeader';
 import { useAuth } from '../../hooks/useAuth';
 import { useAvailableDrivers } from '../../hooks/useInstitutions';
 import { useStudentProfile } from '../../hooks/useProfiles';
 import { useCreateSubscription, useStudentSubscriptions } from '../../hooks/useSubscriptions';
 import { FINANCIAL } from '../../lib/constants';
-import { colors } from '../../lib/theme';
-import type { PaymentMethod } from '../../services/SubscriptionService';
+import { colors, radius, spacing, fontSize, fontWeight } from '../../lib/theme';
+import type { PaymentMethod } from '../../lib/constants';
 import type { User } from '../../types/models';
 import { formatCurrency } from '../../utils/formatters';
 
-const paymentMethods: Array<{ label: string; value: PaymentMethod }> = [
-  { label: 'زين كاش', value: 'zaincash' },
-  { label: 'FIB', value: 'fib' },
-  { label: 'نقداً', value: 'cash' },
-  { label: 'أخرى', value: 'other' },
+const paymentMethods: Array<{ label: string; value: PaymentMethod; icon: keyof typeof Ionicons.glyphMap }> = [
+  { label: 'زين كاش', value: 'zaincash', icon: 'phone-portrait-outline' },
+  { label: 'FIB', value: 'fib', icon: 'card-outline' },
+  { label: 'نقداً', value: 'cash', icon: 'cash-outline' },
+  { label: 'أخرى', value: 'other', icon: 'ellipsis-horizontal-outline' },
 ];
 
 export default function SubscriptionScreen() {
@@ -92,65 +94,118 @@ export default function SubscriptionScreen() {
     }
   };
 
-  const renderDriver = (driver: User) => (
-    <Pressable
-      key={driver.id}
-      onPress={() => setSelectedDriverId(driver.id)}
-      style={[styles.option, selectedDriverId === driver.id && styles.optionSelected]}
-    >
-      <Text style={[styles.optionTitle, selectedDriverId === driver.id && styles.optionTitleSelected]}>
-        {driver.full_name || 'سائق مساري'}
-      </Text>
-      <Text style={styles.optionSubtitle}>{driver.phone}</Text>
-    </Pressable>
-  );
+  const renderDriver = (driver: User) => {
+    const isSelected = selectedDriverId === driver.id;
+    return (
+      <Pressable
+        key={driver.id}
+        onPress={() => setSelectedDriverId(driver.id)}
+        accessible={true}
+        accessibilityRole="button"
+        accessibilityState={{ selected: isSelected }}
+        accessibilityLabel={`السائق ${driver.full_name || 'سائق مساري'}، رقم الهاتف ${driver.phone}`}
+        style={[styles.driverCard, isSelected && styles.driverCardSelected]}
+      >
+        <View style={styles.driverContent}>
+          <View style={[styles.driverAvatar, isSelected && styles.driverAvatarSelected]}>
+            <Ionicons name="bus-outline" size={20} color={isSelected ? '#FFFFFF' : colors.primary} />
+          </View>
+          <View style={styles.driverTexts}>
+            <Text style={[styles.driverName, isSelected && styles.driverNameSelected]}>
+              {driver.full_name || 'سائق مساري'}
+            </Text>
+            <Text style={styles.driverPhone}>{driver.phone}</Text>
+          </View>
+          {isSelected && (
+            <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
+          )}
+        </View>
+      </Pressable>
+    );
+  };
+
+  const isLoading = profile.isLoading || drivers.isLoading || subscriptions.isLoading;
+  const isError = profile.isError || drivers.isError || subscriptions.isError;
+
+  if (isLoading) {
+    return (
+      <Screen>
+        <View style={styles.centerContainer} accessible accessibilityRole="progressbar">
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>جاري تحميل البيانات...</Text>
+        </View>
+      </Screen>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Screen>
+        <EmptyState title="حدث خطأ" message="تعذر تحميل بيانات الاشتراك." icon="alert-circle-outline" />
+      </Screen>
+    );
+  }
+
+  const statusVariant = latestSubscription?.status === 'active' ? 'success' : latestSubscription?.status === 'pending' ? 'warning' : latestSubscription?.status === 'rejected' ? 'danger' : 'muted';
 
   return (
     <Screen>
       <Section title="اشتراكك الحالي">
         {latestSubscription ? (
-          <View style={styles.summary}>
-            <Text style={styles.summaryTitle}>الحالة: {translateStatus(latestSubscription.status)}</Text>
-            <Text style={styles.summaryText}>المبلغ: {formatCurrency(latestSubscription.amount)}</Text>
-            <Text style={styles.summaryText}>ينتهي: {latestSubscription.end_date ?? 'لم يبدأ بعد'}</Text>
+          <View style={styles.subscriptionSummary}>
+            <StatusCard
+              title={`الحالة: ${translateStatus(latestSubscription.status)}`}
+              subtitle={`المبلغ: ${formatCurrency(latestSubscription.amount)} • ينتهي: ${latestSubscription.end_date ?? 'لم يبدأ بعد'}`}
+              variant={statusVariant}
+            />
           </View>
         ) : (
-          <EmptyState title="لا توجد طلبات اشتراك" message="اختر سائقاً وارفع وصل الدفع لإنشاء طلب جديد." />
+          <EmptyState title="لا توجد طلبات اشتراك" message="اختر سائقاً وارفع وصل الدفع لإنشاء طلب جديد." icon="receipt-outline" />
         )}
       </Section>
 
       <Section
         title="طلب اشتراك شهري"
-        subtitle={`قيمة الاشتراك الحالية ${formatCurrency(FINANCIAL.BASE_SUBSCRIPTION)}، والسائق يفعّل الاشتراك لمدة 30 يوماً بعد المراجعة.`}
+        subtitle={`قيمة الاشتراك ${formatCurrency(FINANCIAL.BASE_SUBSCRIPTION)}، والسائق يفعّل الاشتراك لمدة 30 يوماً بعد المراجعة.`}
       >
         {!profile.data ? (
-          <EmptyState title="بيانات الطالب غير مكتملة" message="احفظ مؤسستك ونقطة الصعود من الصفحة الرئيسية أولاً." />
+          <EmptyState title="بيانات الطالب غير مكتملة" message="احفظ مؤسستك ونقطة الصعود من الصفحة الرئيسية أولاً." icon="warning-outline" />
         ) : (
           <>
             <Text style={styles.label}>السائقون المتاحون لمؤسستك</Text>
-            <View style={styles.options}>
+            <View style={styles.driversList} accessibilityRole="radiogroup">
               {drivers.data && drivers.data.length > 0 ? (
                 drivers.data.map(renderDriver)
               ) : (
-                <EmptyState title="لا يوجد سائقون بعد" message="عند انضمام سائق لمؤسستك سيظهر هنا مباشرة." />
+                <EmptyState title="لا يوجد سائقون بعد" message="عند انضمام سائق لمؤسستك سيظهر هنا مباشرة." icon="bus-outline" />
               )}
             </View>
 
-            {selectedDriver ? <Text style={styles.selectedText}>السائق المختار: {selectedDriver.full_name}</Text> : null}
-
             <Text style={styles.label}>طريقة الدفع</Text>
-            <View style={styles.segment}>
-              {paymentMethods.map((method) => (
-                <Pressable
-                  key={method.value}
-                  onPress={() => setPaymentMethod(method.value)}
-                  style={[styles.segmentItem, paymentMethod === method.value && styles.segmentSelected]}
-                >
-                  <Text style={[styles.segmentText, paymentMethod === method.value && styles.segmentTextSelected]}>
-                    {method.label}
-                  </Text>
-                </Pressable>
-              ))}
+            <View style={styles.paymentGrid}>
+              {paymentMethods.map((method) => {
+                const isSelected = paymentMethod === method.value;
+                return (
+                  <Pressable
+                    key={method.value}
+                    onPress={() => setPaymentMethod(method.value)}
+                    accessible={true}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: isSelected }}
+                    accessibilityLabel={method.label}
+                    style={[styles.paymentItem, isSelected && styles.paymentItemSelected]}
+                  >
+                    <Ionicons
+                      name={method.icon}
+                      size={18}
+                      color={isSelected ? '#FFFFFF' : colors.textMuted}
+                    />
+                    <Text style={[styles.paymentText, isSelected && styles.paymentTextSelected]}>
+                      {method.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
             </View>
 
             <AppTextInput
@@ -158,19 +213,27 @@ export default function SubscriptionScreen() {
               value={paymentReference}
               onChangeText={setPaymentReference}
               placeholder="مثال: رقم عملية زين كاش"
+              accessibilityLabel="رقم العملية أو ملاحظة الدفع"
             />
 
             <AppButton
               title={receiptUri ? 'تم اختيار صورة الوصل' : 'اختيار صورة الوصل'}
               onPress={pickReceipt}
               variant="secondary"
+              accessibilityHint="يفتح مكتبة الصور لاختيار إيصال الدفع"
             />
-            {receiptUri ? <Text style={styles.receiptText}>صورة الوصل جاهزة للرفع مع الطلب</Text> : null}
+            {receiptUri ? (
+              <View style={styles.receiptBadge}>
+                <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+                <Text style={styles.receiptText}>صورة الوصل جاهزة للرفع مع الطلب</Text>
+              </View>
+            ) : null}
             <AppButton
               title="إرسال طلب الاشتراك"
               onPress={submitSubscription}
               loading={createSubscription.isPending}
-              disabled={drivers.isLoading || subscriptions.isLoading}
+              disabled={createSubscription.isPending}
+              accessibilityHint="يرسل طلب الاشتراك للمراجعة"
             />
           </>
         )}
@@ -188,103 +251,124 @@ function translateStatus(status: string): string {
 }
 
 const styles = StyleSheet.create({
-  summary: {
-    backgroundColor: colors.surfaceMuted,
-    borderRadius: 8,
-    gap: 6,
-    padding: 14,
-  },
-  summaryTitle: {
-    color: colors.text,
-    fontSize: 17,
-    fontWeight: '900',
-    textAlign: 'right',
-    writingDirection: 'rtl',
-  },
-  summaryText: {
-    color: colors.textMuted,
-    fontSize: 14,
-    textAlign: 'right',
-    writingDirection: 'rtl',
+  subscriptionSummary: {
+    gap: spacing.sm,
   },
   label: {
     color: colors.text,
-    fontSize: 14,
-    fontWeight: '800',
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
     textAlign: 'right',
     writingDirection: 'rtl',
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
   },
-  options: {
-    gap: 8,
+  driversList: {
+    gap: spacing.sm,
   },
-  option: {
+  driverCard: {
     backgroundColor: colors.surfaceMuted,
     borderColor: colors.border,
-    borderRadius: 8,
-    borderWidth: 1,
-    padding: 12,
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+    padding: spacing.md,
   },
-  optionSelected: {
-    backgroundColor: '#E3F4F2',
+  driverCardSelected: {
+    backgroundColor: colors.primaryLight,
     borderColor: colors.primary,
   },
-  optionTitle: {
-    color: colors.text,
-    fontSize: 15,
-    fontWeight: '800',
-    textAlign: 'right',
-    writingDirection: 'rtl',
-  },
-  optionTitleSelected: {
-    color: colors.primary,
-  },
-  optionSubtitle: {
-    color: colors.textMuted,
-    fontSize: 13,
-    marginTop: 3,
-    textAlign: 'right',
-    writingDirection: 'rtl',
-  },
-  selectedText: {
-    color: colors.primary,
-    fontSize: 14,
-    fontWeight: '700',
-    textAlign: 'right',
-    writingDirection: 'rtl',
-  },
-  receiptText: {
-    color: colors.success,
-    fontSize: 13,
-    fontWeight: '700',
-    textAlign: 'right',
-    writingDirection: 'rtl',
-  },
-  segment: {
+  driverContent: {
     flexDirection: 'row-reverse',
-    gap: 8,
+    alignItems: 'center',
+    gap: spacing.md,
   },
-  segmentItem: {
+  driverAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  driverAvatarSelected: {
+    backgroundColor: colors.primary,
+  },
+  driverTexts: {
+    flex: 1,
+    gap: 2,
+  },
+  driverName: {
+    color: colors.text,
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.bold,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  driverNameSelected: {
+    color: colors.primary,
+  },
+  driverPhone: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  paymentGrid: {
+    flexDirection: 'row-reverse',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  paymentItem: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
     backgroundColor: colors.surfaceMuted,
     borderColor: colors.border,
-    borderRadius: 8,
-    borderWidth: 1,
-    flex: 1,
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     minHeight: 42,
-    justifyContent: 'center',
-    paddingHorizontal: 8,
   },
-  segmentSelected: {
+  paymentItemSelected: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
-  segmentText: {
+  paymentText: {
     color: colors.text,
-    fontSize: 13,
-    fontWeight: '800',
-    textAlign: 'center',
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
     writingDirection: 'rtl',
   },
-  segmentTextSelected: {
+  paymentTextSelected: {
     color: '#FFFFFF',
+  },
+  receiptBadge: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.successLight,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  receiptText: {
+    color: colors.success,
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    writingDirection: 'rtl',
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+  },
+  loadingText: {
+    marginTop: spacing.md,
+    color: colors.textMuted,
+    fontSize: fontSize.md,
+    textAlign: 'center',
   },
 });

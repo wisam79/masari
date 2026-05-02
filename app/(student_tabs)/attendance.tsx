@@ -1,19 +1,22 @@
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, View, ActivityIndicator, Platform } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
+import { Ionicons } from '@expo/vector-icons';
 import { AppButton } from '../../components/common/AppButton';
 import { EmptyState } from '../../components/common/EmptyState';
 import { Screen } from '../../components/common/Screen';
 import { Section } from '../../components/common/Section';
-import { getTodayDate, useStudentAttendance, useUpsertAttendance } from '../../hooks/useAttendance';
+import { StatusCard } from '../../components/common/ScreenHeader';
+import { getTodayDate, useServerDate, useStudentAttendance, useUpsertAttendance } from '../../hooks/useAttendance';
 import { useAuth } from '../../hooks/useAuth';
 import { useDriverLocation } from '../../hooks/useLocationTracking';
 import { useStudentProfile } from '../../hooks/useProfiles';
 import { useStudentSubscriptions } from '../../hooks/useSubscriptions';
-import { colors } from '../../lib/theme';
+import { colors, radius, spacing, fontSize, fontWeight } from '../../lib/theme';
 
 export default function AttendanceScreen() {
   const { user } = useAuth();
-  const today = getTodayDate();
+  const serverDate = useServerDate();
+  const today = serverDate.data ?? getTodayDate();
   const subscriptions = useStudentSubscriptions(user?.id);
   const activeSubscription = subscriptions.data?.find((subscription) => subscription.status === 'active');
   const profile = useStudentProfile(user?.id);
@@ -45,39 +48,73 @@ export default function AttendanceScreen() {
   };
 
   const hasMap = Boolean(profile.data && driverLocation.data);
+  const isLoading = subscriptions.isLoading || profile.isLoading || attendance.isLoading;
+  const isError = subscriptions.isError || profile.isError || attendance.isError;
+
+  if (isLoading) {
+    return (
+      <Screen>
+        <View style={styles.centerContainer} accessible accessibilityRole="progressbar">
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>جاري تحميل البيانات...</Text>
+        </View>
+      </Screen>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Screen>
+        <EmptyState title="حدث خطأ" message="تعذر تحميل بيانات الحضور. يرجى المحاولة لاحقاً." icon="alert-circle-outline" />
+      </Screen>
+    );
+  }
+
+  const attendanceVariant = attendance.data?.status === 'absent' ? 'danger' : attendance.data?.status === 'present' || attendance.data?.status === 'in_transit' ? 'success' : 'warning';
 
   return (
     <Screen>
       <Section title="حضور اليوم" subtitle={`تاريخ اليوم: ${today}`}>
         {attendance.data ? (
-          <View style={styles.statusBox}>
-            <Text style={styles.statusTitle}>{translateAttendance(attendance.data.status)}</Text>
-            <Text style={styles.statusText}>آخر تحديث محفوظ لهذا اليوم.</Text>
-          </View>
+          <StatusCard
+            title={translateAttendance(attendance.data.status)}
+            subtitle="آخر تحديث محفوظ لهذا اليوم."
+            variant={attendanceVariant}
+          />
         ) : (
-          <EmptyState title="لم تسجل حالة اليوم بعد" message="إذا لن تذهب اليوم، سجّل الغياب مبكراً حتى لا ينتظرك السائق." />
+          <EmptyState title="لم تسجل حالة اليوم بعد" message="إذا لن تذهب اليوم، سجّل الغياب مبكراً حتى لا ينتظرك السائق." icon="calendar-outline" />
         )}
 
-        <AppButton
-          title="أنا غائب اليوم"
-          onPress={() => updateTodayStatus('absent')}
-          loading={upsertAttendance.isPending}
-          disabled={!activeSubscription}
-          variant="danger"
-        />
-        <AppButton
-          title="أنا حاضر اليوم"
-          onPress={() => updateTodayStatus('present')}
-          loading={upsertAttendance.isPending}
-          disabled={!activeSubscription}
-          variant="secondary"
-        />
+        <View style={styles.actionRow}>
+          <View style={styles.actionFlex}>
+            <AppButton
+              title="أنا حاضر"
+              onPress={() => updateTodayStatus('present')}
+              loading={upsertAttendance.isPending}
+              disabled={!activeSubscription || upsertAttendance.isPending}
+              variant="secondary"
+              size="small"
+              accessibilityHint="يسجل حالتك كحاضر لهذا اليوم"
+            />
+          </View>
+          <View style={styles.actionFlex}>
+            <AppButton
+              title="أنا غائب"
+              onPress={() => updateTodayStatus('absent')}
+              loading={upsertAttendance.isPending}
+              disabled={!activeSubscription || upsertAttendance.isPending}
+              variant="danger"
+              size="small"
+              accessibilityHint="يسجل حالتك كغائب لهذا اليوم"
+            />
+          </View>
+        </View>
       </Section>
 
       <Section title="موقع السائق">
         {hasMap && profile.data && driverLocation.data ? (
           <>
-            <View style={styles.mapShell}>
+            <View style={styles.mapShell} accessible={true} accessibilityLabel="خريطة توضح موقع السائق وموقع صعودك">
               <MapView
                 style={styles.map}
                 initialRegion={{
@@ -100,14 +137,18 @@ export default function AttendanceScreen() {
                 />
               </MapView>
             </View>
-            <Text style={styles.mapCaption}>
-              آخر تحديث للسائق: {driverLocation.data.last_updated ?? 'غير محدد'}
-            </Text>
+            <View style={styles.mapCaption}>
+              <Ionicons name="time-outline" size={14} color={colors.textMuted} />
+              <Text style={styles.mapCaptionText}>
+                آخر تحديث: {driverLocation.data.last_updated ?? 'غير محدد'}
+              </Text>
+            </View>
           </>
         ) : (
           <EmptyState
             title="موقع السائق غير متاح"
             message="سيظهر موقع السائق هنا بعد تفعيل الاشتراك وبدء السائق في إرسال موقعه."
+            icon="map-outline"
           />
         )}
       </Section>
@@ -127,8 +168,8 @@ function translateAttendance(status: string): string {
 const styles = StyleSheet.create({
   mapShell: {
     borderColor: colors.border,
-    borderRadius: 8,
-    borderWidth: 1,
+    borderRadius: radius.lg,
+    borderWidth: 1.5,
     height: 260,
     overflow: 'hidden',
   },
@@ -136,28 +177,34 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   mapCaption: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+  },
+  mapCaptionText: {
     color: colors.textMuted,
-    fontSize: 13,
-    textAlign: 'right',
+    fontSize: fontSize.xs,
     writingDirection: 'rtl',
   },
-  statusBox: {
-    backgroundColor: '#FFF7E6',
-    borderRadius: 8,
-    gap: 4,
-    padding: 14,
+  actionRow: {
+    flexDirection: 'row-reverse',
+    gap: spacing.md,
+    marginTop: spacing.sm,
   },
-  statusTitle: {
-    color: colors.warning,
-    fontSize: 18,
-    fontWeight: '900',
-    textAlign: 'right',
-    writingDirection: 'rtl',
+  actionFlex: {
+    flex: 1,
   },
-  statusText: {
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+  },
+  loadingText: {
+    marginTop: spacing.md,
     color: colors.textMuted,
-    fontSize: 14,
-    textAlign: 'right',
-    writingDirection: 'rtl',
+    fontSize: fontSize.md,
+    textAlign: 'center',
   },
 });

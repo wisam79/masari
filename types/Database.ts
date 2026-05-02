@@ -7,8 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
@@ -309,7 +307,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          amount?: number
+          amount: number
           approved_at?: string | null
           created_at?: string | null
           driver_id: string
@@ -383,7 +381,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           email?: string | null
-          full_name: string
+          full_name?: string
           id?: string
           phone?: string | null
           role: string
@@ -407,59 +405,12 @@ export type Database = {
     Functions: {
       approve_subscription: {
         Args: { p_subscription_id: string }
-        Returns: {
-          amount: number
-          approved_at: string | null
-          created_at: string | null
-          driver_id: string
-          end_date: string | null
-          id: string
-          institution_id: string
-          payment_method: string
-          payment_reference: string | null
-          receipt_image_path: string | null
-          receipt_image_url: string | null
-          rejected_at: string | null
-          rejection_reason: string | null
-          start_date: string | null
-          status: string
-          student_id: string
-          updated_at: string | null
-        }
-        SetofOptions: {
-          from: "*"
-          to: "subscriptions"
-          isOneToOne: true
-          isSetofReturn: false
-        }
+        Returns: undefined
       }
+      get_current_date: { Args: never; Returns: string }
       reject_subscription: {
-        Args: { p_reason?: string; p_subscription_id: string }
-        Returns: {
-          amount: number
-          approved_at: string | null
-          created_at: string | null
-          driver_id: string
-          end_date: string | null
-          id: string
-          institution_id: string
-          payment_method: string
-          payment_reference: string | null
-          receipt_image_path: string | null
-          receipt_image_url: string | null
-          rejected_at: string | null
-          rejection_reason: string | null
-          start_date: string | null
-          status: string
-          student_id: string
-          updated_at: string | null
-        }
-        SetofOptions: {
-          from: "*"
-          to: "subscriptions"
-          isOneToOne: true
-          isSetofReturn: false
-        }
+        Args: { p_reason: string; p_subscription_id: string }
+        Returns: undefined
       }
     }
     Enums: {

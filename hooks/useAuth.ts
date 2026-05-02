@@ -1,6 +1,8 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { authService } from '../services/AuthService';
 import { useAuthStore } from '../store/authStore';
+import { supabase } from '../lib/supabase';
+import { userRepository } from '../repositories/UserRepository';
 
 export function useAuth() {
   const {
@@ -15,37 +17,49 @@ export function useAuth() {
   } = useAuthStore();
 
   useEffect(() => {
-    if (isInitialized) {
-      return;
-    }
+    let mounted = true;
 
-    const initializeAuth = async () => {
+    const initAuth = async () => {
       try {
-        const currentUser = await authService.getCurrentUser();
-        setUser(currentUser);
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          const userProfile = await userRepository.getUserById(session.user.id);
+          if (mounted) setUser(userProfile || null);
+        } else {
+          if (mounted) setUser(null);
+        }
       } catch (error) {
-        console.error('Error initializing auth:', error);
-        setUser(null);
+        console.error('Error during initial session fetch:', error);
+        if (mounted) setUser(null);
       } finally {
-        setInitialized(true);
-        setLoading(false);
+        if (mounted && !useAuthStore.getState().isInitialized) {
+          useAuthStore.getState().setInitialized(true);
+          useAuthStore.getState().setLoading(false);
+        }
       }
     };
 
-    initializeAuth();
-  }, [isInitialized, setInitialized, setUser, setLoading]);
+    if (!useAuthStore.getState().isInitialized) {
+      initAuth();
+    }
 
-  useEffect(() => {
-    const { data: { subscription } } = authService.onAuthStateChange((user) => {
-      setUser(user);
+    const { data: { subscription } } = authService.onAuthStateChange(async (authUser) => {
+      if (mounted) {
+        setUser(authUser);
+        if (!useAuthStore.getState().isInitialized) {
+          useAuthStore.getState().setInitialized(true);
+          useAuthStore.getState().setLoading(false);
+        }
+      }
     });
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
-  }, [setUser]);
+  }, []);
 
-  const signIn = async (email: string, pass: string) => {
+  const signIn = useCallback(async (email: string, pass: string) => {
     setLoading(true);
     try {
       const result = await authService.signInWithEmail(email, pass);
@@ -56,12 +70,12 @@ export function useAuth() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [setLoading, setUser]);
 
-  const signUp = async (email: string, pass: string) => {
+  const signUp = useCallback(async (email: string, pass: string, fullName?: string) => {
     setLoading(true);
     try {
-      const result = await authService.signUpWithEmail(email, pass);
+      const result = await authService.signUpWithEmail(email, pass, fullName);
       if (result.success && result.user) {
         setUser(result.user);
       }
@@ -69,18 +83,18 @@ export function useAuth() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [setLoading, setUser]);
 
-  const resetPassword = async (email: string) => {
+  const resetPassword = useCallback(async (email: string) => {
     setLoading(true);
     try {
       return await authService.resetPassword(email);
     } finally {
       setLoading(false);
     }
-  };
+  }, [setLoading]);
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     setLoading(true);
     try {
       const success = await authService.signOut();
@@ -91,7 +105,7 @@ export function useAuth() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [setLoading, logout]);
 
   return {
     user,

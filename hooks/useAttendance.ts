@@ -5,6 +5,11 @@ import { supabase } from '../lib/supabase';
 import { attendanceRepository } from '../repositories/AttendanceRepository';
 import type { DailyAttendance, DailyAttendanceInsert, DailyAttendanceUpdate } from '../types/models';
 
+/**
+ * Gets the current date in YYYY-MM-DD format using local device time.
+ * For server-verified date, use `useServerDate()` hook instead.
+ * @returns Current date string.
+ */
 export function getTodayDate(): string {
   const date = new Date();
   const year = date.getFullYear();
@@ -13,6 +18,24 @@ export function getTodayDate(): string {
   return `${year}-${month}-${day}`;
 }
 
+/**
+ * Fetches the current date from the server and falls back to local date.
+ * @returns React Query object containing the server date string.
+ */
+export function useServerDate() {
+  return useQuery({
+    queryKey: ['server-date'],
+    queryFn: () => attendanceRepository.getServerDate(),
+    staleTime: 60 * 60 * 1000,
+  });
+}
+
+/**
+ * Fetches and subscribes to real-time daily attendance for a specific student.
+ * @param studentId - The ID of the student.
+ * @param date - The date to fetch attendance for (defaults to today).
+ * @returns React Query object containing the student's daily attendance.
+ */
 export function useStudentAttendance(studentId?: string, date = getTodayDate()) {
   const queryClient = useQueryClient();
   const query = useQuery({
@@ -60,6 +83,12 @@ export function useStudentAttendance(studentId?: string, date = getTodayDate()) 
   return query;
 }
 
+/**
+ * Fetches and subscribes to real-time daily attendance for all students associated with a driver.
+ * @param driverId - The ID of the driver.
+ * @param date - The date to fetch attendance for (defaults to today).
+ * @returns React Query object containing the daily attendance records.
+ */
 export function useDriverAttendance(driverId?: string, date = getTodayDate()) {
   const queryClient = useQueryClient();
   const query = useQuery({
@@ -109,6 +138,10 @@ export function useDriverAttendance(driverId?: string, date = getTodayDate()) {
   return query;
 }
 
+/**
+ * Upserts an attendance record.
+ * @returns React Mutation object for upserting an attendance record.
+ */
 export function useUpsertAttendance() {
   const queryClient = useQueryClient();
 
@@ -125,6 +158,10 @@ export function useUpsertAttendance() {
   });
 }
 
+/**
+ * Updates an existing attendance record.
+ * @returns React Mutation object for updating an attendance record.
+ */
 export function useUpdateAttendance() {
   const queryClient = useQueryClient();
 

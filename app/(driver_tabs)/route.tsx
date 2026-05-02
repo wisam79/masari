@@ -1,11 +1,13 @@
 import { useMemo } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
+import { Ionicons } from '@expo/vector-icons';
 import { AppButton } from '../../components/common/AppButton';
 import { EmptyState } from '../../components/common/EmptyState';
 import { Screen } from '../../components/common/Screen';
 import { Section } from '../../components/common/Section';
-import { getTodayDate, useDriverAttendance, useUpsertAttendance } from '../../hooks/useAttendance';
+import { StatusCard } from '../../components/common/ScreenHeader';
+import { getTodayDate, useDriverAttendance, useServerDate, useUpsertAttendance } from '../../hooks/useAttendance';
 import { useAuth } from '../../hooks/useAuth';
 import {
   useDriverLocation,
@@ -15,12 +17,13 @@ import {
 import { useStudentProfiles } from '../../hooks/useProfiles';
 import { useDriverSubscriptions } from '../../hooks/useSubscriptions';
 import { useUsersByIds } from '../../hooks/useUsers';
-import { colors } from '../../lib/theme';
+import { colors, radius, spacing, fontSize, fontWeight } from '../../lib/theme';
 import type { Subscription } from '../../types/models';
 
 export default function RouteScreen() {
   const { user } = useAuth();
-  const today = getTodayDate();
+  const serverDate = useServerDate();
+  const today = serverDate.data ?? getTodayDate();
   const subscriptions = useDriverSubscriptions(user?.id);
   const activeSubscriptions = subscriptions.data?.filter((subscription) => subscription.status === 'active') ?? [];
   const studentIds = activeSubscriptions.map((subscription) => subscription.student_id);
@@ -48,9 +51,7 @@ export default function RouteScreen() {
   const smartPolling = useSmartDriverLocationPolling(user?.id, pickupPoints, pickupPoints.length > 0);
 
   const updateLocation = async () => {
-    if (!user?.id) {
-      return;
-    }
+    if (!user?.id) return;
 
     try {
       await updateDriverLocation.mutateAsync(user.id);
@@ -84,26 +85,50 @@ export default function RouteScreen() {
   return (
     <Screen>
       <Section title="موقع السائق" subtitle="حدّث موقعك قبل الانطلاق أو أثناء الرحلة ليظهر للطلاب المرتبطين بك.">
-        <View style={styles.statusBox}>
-          <Text style={styles.statusText}>
-            التتبع الذكي: {smartPolling.isPolling ? 'يعمل' : 'ينتظر وجود طلاب فعّالين'}
-          </Text>
-          <Text style={styles.statusText}>
-            أقرب طالب: {formatDistance(smartPolling.nearestDistanceMeters)}
-          </Text>
-          <Text style={styles.statusText}>
-            الوتيرة القادمة: {formatInterval(smartPolling.nextIntervalMs)}
-          </Text>
-          {smartPolling.lastError ? <Text style={styles.errorText}>{smartPolling.lastError}</Text> : null}
+        <View style={styles.trackingInfo}>
+          <View style={styles.trackingRow}>
+            <View style={styles.trackingDot}>
+              <Ionicons
+                name={smartPolling.isPolling ? 'radio-button-on' : 'radio-button-off'}
+                size={16}
+                color={smartPolling.isPolling ? colors.success : colors.textMuted}
+              />
+            </View>
+            <Text style={styles.trackingText}>
+              التتبع الذكي: {smartPolling.isPolling ? 'يعمل' : 'ينتظر وجود طلاب فعّالين'}
+            </Text>
+          </View>
+          <View style={styles.trackingRow}>
+            <View style={styles.trackingDot}>
+              <Ionicons name="navigate-outline" size={16} color={colors.primary} />
+            </View>
+            <Text style={styles.trackingText}>
+              أقرب طالب: {formatDistance(smartPolling.nearestDistanceMeters)}
+            </Text>
+          </View>
+          <View style={styles.trackingRow}>
+            <View style={styles.trackingDot}>
+              <Ionicons name="timer-outline" size={16} color={colors.warning} />
+            </View>
+            <Text style={styles.trackingText}>
+              الوتيرة القادمة: {formatInterval(smartPolling.nextIntervalMs)}
+            </Text>
+          </View>
+          {smartPolling.lastError ? (
+            <Text style={styles.errorText}>{smartPolling.lastError}</Text>
+          ) : null}
         </View>
         <AppButton
           title="تحديث موقعي الآن"
           onPress={updateLocation}
           loading={updateDriverLocation.isPending}
+          accessibilityHint="اضغط لتحديث موقعك على الخريطة فوراً"
         />
       </Section>
 
-      {firstProfile ? (
+      {profiles.isLoading ? (
+        <ActivityIndicator size="large" color={colors.primary} style={{ marginVertical: 30 }} accessibilityLabel="جاري تحميل الخريطة" />
+      ) : firstProfile ? (
         <View style={styles.mapShell}>
           <MapView
             style={styles.map}
@@ -116,9 +141,7 @@ export default function RouteScreen() {
           >
             {visibleSubscriptions.map((subscription) => {
               const profile = getProfile(subscription.student_id);
-              if (!profile) {
-                return null;
-              }
+              if (!profile) return null;
 
               return (
                 <Marker
@@ -141,30 +164,48 @@ export default function RouteScreen() {
       ) : null}
 
       <Section title="مسار اليوم">
-        {visibleSubscriptions.length > 0 ? (
-          visibleSubscriptions.map((subscription) => {
-            const profile = getProfile(subscription.student_id);
-            const status = attendance.data?.find((item) => item.student_id === subscription.student_id)?.status;
+        {subscriptions.isLoading ? (
+          <ActivityIndicator size="large" color={colors.primary} style={{ padding: 20 }} accessibilityLabel="جاري تحميل المسار" />
+        ) : visibleSubscriptions.length > 0 ? (
+          <View style={styles.studentList}>
+            {visibleSubscriptions.map((subscription) => {
+              const profile = getProfile(subscription.student_id);
+              const status = attendance.data?.find((item) => item.student_id === subscription.student_id)?.status;
 
-            return (
-              <View key={subscription.id} style={styles.item}>
-                <Text style={styles.itemTitle}>{getStudentName(subscription.student_id)}</Text>
-                <Text style={styles.itemText}>{profile?.pickup_address ?? 'لا يوجد وصف لنقطة الصعود'}</Text>
-                <Text style={styles.itemText}>الحالة: {translateAttendance(status ?? 'pending')}</Text>
-                <View style={styles.actions}>
-                  <View style={styles.action}>
-                    <AppButton title="وصلت" onPress={() => updateStudentStatus(subscription, 'driver_waiting')} variant="secondary" />
+              return (
+                <View key={subscription.id} style={styles.studentCard}>
+                  <View style={styles.studentHeader}>
+                    <View style={styles.studentAvatar}>
+                      <Ionicons name="person-outline" size={18} color={colors.primary} />
+                    </View>
+                    <View style={styles.studentTexts}>
+                      <Text style={styles.studentName}>{getStudentName(subscription.student_id)}</Text>
+                      <Text style={styles.studentAddress}>{profile?.pickup_address ?? 'لا يوجد وصف لنقطة الصعود'}</Text>
+                    </View>
                   </View>
-                  <View style={styles.action}>
-                    <AppButton title="صعد" onPress={() => updateStudentStatus(subscription, 'in_transit')} />
+
+                  <View style={styles.statusRow}>
+                    <StatusCard
+                      title={translateAttendance(status ?? 'pending')}
+                      variant={status === 'completed' ? 'success' : status === 'in_transit' ? 'info' : status === 'driver_waiting' ? 'warning' : 'muted'}
+                    />
                   </View>
+
+                  <View style={styles.studentActions}>
+                    <View style={styles.actionFlex}>
+                      <AppButton title="وصلت" onPress={() => updateStudentStatus(subscription, 'driver_waiting')} variant="secondary" size="small" accessibilityHint={`تحديد أنك وصلت لنقطة صعود ${getStudentName(subscription.student_id)}`} />
+                    </View>
+                    <View style={styles.actionFlex}>
+                      <AppButton title="صعد" onPress={() => updateStudentStatus(subscription, 'in_transit')} size="small" accessibilityHint={`تحديد أن الطالب ${getStudentName(subscription.student_id)} صعد الحافلة`} />
+                    </View>
+                  </View>
+                  <AppButton title="اكتملت الرحلة" onPress={() => updateStudentStatus(subscription, 'completed')} variant="ghost" size="small" accessibilityHint="إنهاء الرحلة لهذا الطالب" />
                 </View>
-                <AppButton title="اكتملت الرحلة" onPress={() => updateStudentStatus(subscription, 'completed')} variant="ghost" />
-              </View>
-            );
-          })
+              );
+            })}
+          </View>
         ) : (
-          <EmptyState title="لا يوجد طلاب في مسار اليوم" message="الطلاب الغائبون أو غير المشتركين لا يظهرون ضمن المسار." />
+          <EmptyState title="لا يوجد طلاب في مسار اليوم" message="الطلاب الغائبون أو غير المشتركين لا يظهرون ضمن المسار." icon="map-outline" />
         )}
       </Section>
     </Screen>
@@ -172,22 +213,13 @@ export default function RouteScreen() {
 }
 
 function formatDistance(distanceMeters: number | null): string {
-  if (distanceMeters === null) {
-    return 'غير محسوب';
-  }
-
-  if (distanceMeters >= 1000) {
-    return `${(distanceMeters / 1000).toFixed(1)} كم`;
-  }
-
+  if (distanceMeters === null) return 'غير محسوب';
+  if (distanceMeters >= 1000) return `${(distanceMeters / 1000).toFixed(1)} كم`;
   return `${Math.round(distanceMeters)} متر`;
 }
 
 function formatInterval(intervalMs: number | null): string {
-  if (intervalMs === null) {
-    return 'غير محددة';
-  }
-
+  if (intervalMs === null) return 'غير محددة';
   return `${Math.round(intervalMs / 60000)} دقيقة`;
 }
 
@@ -203,56 +235,89 @@ function translateAttendance(status: string): string {
 const styles = StyleSheet.create({
   mapShell: {
     borderColor: colors.border,
-    borderRadius: 8,
-    borderWidth: 1,
+    borderRadius: radius.lg,
+    borderWidth: 1.5,
     height: 260,
     overflow: 'hidden',
   },
   map: {
     flex: 1,
   },
-  statusBox: {
+  trackingInfo: {
     backgroundColor: colors.surfaceMuted,
-    borderRadius: 8,
-    gap: 5,
-    padding: 12,
+    borderRadius: radius.md,
+    gap: spacing.sm,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
   },
-  statusText: {
+  trackingRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  trackingDot: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  trackingText: {
     color: colors.text,
-    fontSize: 14,
-    textAlign: 'right',
+    fontSize: fontSize.sm,
     writingDirection: 'rtl',
   },
   errorText: {
     color: colors.danger,
-    fontSize: 13,
+    fontSize: fontSize.xs,
     textAlign: 'right',
     writingDirection: 'rtl',
   },
-  item: {
+  studentList: {
+    gap: spacing.md,
+  },
+  studentCard: {
     backgroundColor: colors.surfaceMuted,
-    borderRadius: 8,
-    gap: 8,
-    padding: 14,
+    borderRadius: radius.lg,
+    gap: spacing.sm,
+    padding: spacing.lg,
   },
-  itemTitle: {
-    color: colors.text,
-    fontSize: 17,
-    fontWeight: '900',
-    textAlign: 'right',
-    writingDirection: 'rtl',
-  },
-  itemText: {
-    color: colors.textMuted,
-    fontSize: 14,
-    textAlign: 'right',
-    writingDirection: 'rtl',
-  },
-  actions: {
+  studentHeader: {
     flexDirection: 'row-reverse',
-    gap: 10,
+    alignItems: 'center',
+    gap: spacing.md,
   },
-  action: {
+  studentAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  studentTexts: {
+    flex: 1,
+    gap: 2,
+  },
+  studentName: {
+    color: colors.text,
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  studentAddress: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    writingDirection: 'rtl',
+  },
+  statusRow: {
+    marginVertical: spacing.xs,
+  },
+  studentActions: {
+    flexDirection: 'row-reverse',
+    gap: spacing.md,
+  },
+  actionFlex: {
     flex: 1,
   },
 });

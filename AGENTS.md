@@ -29,18 +29,21 @@
 - Role 'driver': يتم توجيهه إلى `(driver_tabs)`.
 
 # الميزات الأساسية المطلوبة (MVP Core Features)
-1. نظام المصادقة (Auth): تسجيل دخول برقم الهاتف.
+1. نظام المصادقة (Auth): تسجيل دخول بالبريد الإلكتروني وكلمة المرور عبر Supabase Email Auth.
 2. إدارة الاشتراكات (Manual Billing): الطالب يرفع صورة وصل تحويل مالي (مثل زين كاش أو FIB) إلى Supabase Storage. السائق يراجع الوصل ويوافق، فيتحدث اشتراك الطالب لـ 30 يوماً.
 3. تتبع الموقع الذكي (Smart Polling): السائق يرسل موقعه كل 5-10 دقائق، وعند الاقتراب من موقع الطالب، تتغير الوتيرة إلى كل دقيقة.
 4. إدارة الحضور: زر للطالب يعلن فيه "غيابه اليوم" ليختفي من مسار السائق.
 
 # معمارية قاعدة البيانات المقترحة (Database Schema)
 استخدم هذه الهيكلية كمرجع، وقم ببنائها عبر SQL مع تفعيل (RLS Policies):
-- `users`: id, full_name, phone, role (student/driver), created_at.
-- `student_driver_link`: student_id, driver_id, pickup_lat, pickup_lng, is_active.
-- `subscriptions`: id, student_id, driver_id, status (pending/active/expired), start_date, end_date, receipt_image_url.
-- `daily_attendance`: id, student_id, date, status.
-- `driver_locations`: driver_id, lat, lng, last_updated.
+- `users`: id, full_name, email, phone, role (student/driver/unassigned), created_at.
+- `institutions`: id, name, city, address, lat, lng, is_active, created_at.
+- `driver_institutions`: id, driver_id, institution_id, is_active, created_at.
+- `student_profiles`: user_id, institution_id, pickup_lat, pickup_lng, pickup_address, created_at.
+- `student_driver_link`: id, student_id, driver_id, institution_id, pickup_lat, pickup_lng, pickup_address, is_active, created_at.
+- `subscriptions`: id, student_id, driver_id, institution_id, amount, status (pending/active/expired/rejected), payment_method, payment_reference, receipt_image_path, receipt_image_url, start_date, end_date, approved_at, rejected_at, rejection_reason, created_at.
+- `daily_attendance`: id, student_id, driver_id, institution_id, date, status, created_at.
+- `driver_locations`: id, driver_id, lat, lng, last_updated, created_at.
 
 # خطة التنفيذ الصارمة (Strict Execution Plan)
 **قاعدة ذهبية: نفذ الخطوة المطلوبة فقط. لا تنتقل للخطوة التالية إلا بعد أن أطلب منك ذلك.**
@@ -52,3 +55,10 @@
 الخطوة 4: Location Polling & Realtime Maps.
 
 الآن: أجب بـ "قرأت التعليمات، فهمت دور MCP، وأنا مستعد". ثم ابدأ بتنفيذ **الخطوة 1 فقط**.
+
+---
+# Troubleshoot Expo Go
+When the user faces "Failed to download remote update" in Expo Go on Windows due to Firewall or Network configurations blocking the download:
+1. Ensure `@expo/ngrok` is installed: `npm install -D @expo/ngrok --legacy-peer-deps`
+2. Run the start command with the tunnel flag targeting Expo Go directly: `npx expo start --go --tunnel`
+3. Have the user scan the tunneled `exp://*.exp.direct` URL.

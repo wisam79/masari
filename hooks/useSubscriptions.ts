@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { subscriptionRepository } from '../repositories/SubscriptionRepository';
-import { subscriptionService, type PaymentMethod } from '../services/SubscriptionService';
+import { subscriptionService } from '../services/SubscriptionService';
+import type { PaymentMethod } from '../lib/constants';
 
 interface CreateSubscriptionInput {
   studentId: string;
@@ -11,6 +12,11 @@ interface CreateSubscriptionInput {
   receiptUri?: string;
 }
 
+/**
+ * Fetches subscription requests for a specific student.
+ * @param studentId - The ID of the student.
+ * @returns React Query object containing the student's subscriptions.
+ */
 export function useStudentSubscriptions(studentId?: string) {
   return useQuery({
     enabled: !!studentId,
@@ -19,6 +25,11 @@ export function useStudentSubscriptions(studentId?: string) {
   });
 }
 
+/**
+ * Fetches subscription requests directed to a specific driver.
+ * @param driverId - The ID of the driver.
+ * @returns React Query object containing the driver's subscription requests.
+ */
 export function useDriverSubscriptions(driverId?: string) {
   return useQuery({
     enabled: !!driverId,
@@ -27,6 +38,10 @@ export function useDriverSubscriptions(driverId?: string) {
   });
 }
 
+/**
+ * Creates a new subscription request.
+ * @returns React Mutation object for creating a subscription.
+ */
 export function useCreateSubscription() {
   const queryClient = useQueryClient();
 
@@ -39,12 +54,20 @@ export function useCreateSubscription() {
   });
 }
 
+/**
+ * Generates a public URL for a receipt image.
+ * @returns React Mutation object for getting the receipt URL.
+ */
 export function useReceiptUrl() {
   return useMutation({
     mutationFn: (receiptPath: string) => subscriptionService.createReceiptUrl(receiptPath),
   });
 }
 
+/**
+ * Approves a pending subscription.
+ * @returns React Mutation object for approving a subscription.
+ */
 export function useApproveSubscription() {
   const queryClient = useQueryClient();
 
@@ -57,6 +80,10 @@ export function useApproveSubscription() {
   });
 }
 
+/**
+ * Rejects a pending subscription.
+ * @returns React Mutation object for rejecting a subscription.
+ */
 export function useRejectSubscription() {
   const queryClient = useQueryClient();
 

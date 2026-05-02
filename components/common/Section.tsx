@@ -1,16 +1,18 @@
 import { ReactNode } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { colors } from '../../lib/theme';
+import { StyleSheet, Text, View, StyleProp, ViewStyle, Platform } from 'react-native';
+import { colors, radius, spacing, fontSize, fontWeight } from '../../lib/theme';
 
-interface SectionProps {
+export interface SectionProps {
   title: string;
   subtitle?: string;
   children: ReactNode;
+  style?: StyleProp<ViewStyle>;
+  icon?: string;
 }
 
-export function Section({ title, subtitle, children }: SectionProps) {
+export function Section({ title, subtitle, children, style }: SectionProps) {
   return (
-    <View style={styles.section}>
+    <View style={[styles.section, style]}>
       <View style={styles.header}>
         <Text style={styles.title}>{title}</Text>
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
@@ -23,25 +25,34 @@ export function Section({ title, subtitle, children }: SectionProps) {
 const styles = StyleSheet.create({
   section: {
     backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 8,
-    borderWidth: 1,
-    gap: 14,
-    padding: 16,
+    borderRadius: radius.lg,
+    gap: spacing.md,
+    padding: spacing.lg,
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.shadow,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 1,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
   },
   header: {
-    gap: 4,
+    gap: 2,
   },
   title: {
     color: colors.text,
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.extrabold,
     textAlign: 'right',
     writingDirection: 'rtl',
   },
   subtitle: {
     color: colors.textMuted,
-    fontSize: 14,
+    fontSize: fontSize.sm,
     lineHeight: 20,
     textAlign: 'right',
     writingDirection: 'rtl',

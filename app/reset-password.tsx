@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { Alert, StyleSheet, Text, View, Pressable } from 'react-native';
+import { Alert, StyleSheet, Text, View, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { AppButton } from '../components/common/AppButton';
 import { AppTextInput } from '../components/common/AppTextInput';
-import { Screen } from '../components/common/Screen';
 import { useAuth } from '../hooks/useAuth';
-import { colors } from '../lib/theme';
+import { colors, radius, spacing, fontSize, fontWeight } from '../lib/theme';
 import { validateEmail } from '../utils/validators';
 
 export default function ResetPasswordScreen() {
@@ -13,12 +13,17 @@ export default function ResetPasswordScreen() {
   const { resetPassword } = useAuth();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
+  const [emailError, setEmailError] = useState('');
 
   const handleReset = async () => {
+    setEmailError('');
     const normalizedEmail = email.trim().toLowerCase();
 
-    if (!validateEmail(normalizedEmail)) {
-      Alert.alert('بريد إلكتروني غير صحيح', 'أدخل عنوان بريد إلكتروني صالح');
+    if (!normalizedEmail) {
+      setEmailError('البريد الإلكتروني مطلوب');
+      return;
+    } else if (!validateEmail(normalizedEmail)) {
+      setEmailError('يرجى إدخال عنوان بريد إلكتروني صالح');
       return;
     }
 
@@ -35,72 +40,137 @@ export default function ResetPasswordScreen() {
         Alert.alert('فشل الإرسال', result.error || 'تأكد من صحة البريد الإلكتروني');
       }
     } catch (_error) {
-      Alert.alert('خطأ', 'حدث خطأ غير متوقع');
+      Alert.alert('خطأ', 'حدث خطأ غير متوقع أثناء محاولة استعادة كلمة المرور');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Screen>
-      <View style={styles.header}>
-        <Text style={styles.title}>استعادة كلمة المرور</Text>
-        <Text style={styles.subtitle}>أدخل بريدك الإلكتروني وسنرسل لك رابطاً لاستعادة كلمة المرور.</Text>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.root}
+    >
+      <View style={styles.headerCurve}>
+        <View style={styles.logoCircle}>
+          <Ionicons name="lock-closed-outline" size={32} color="#FFFFFF" />
+        </View>
+        <Text style={styles.appName}>استعادة كلمة المرور</Text>
+        <Text style={styles.tagline}>أدخل بريدك الإلكتروني وسنرسل لك رابطاً للاستعادة</Text>
       </View>
 
-      <View style={styles.form}>
-        <AppTextInput
-          label="البريد الإلكتروني"
-          placeholder="example@student.edu.iq"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoFocus
-        />
+      <View style={styles.card}>
+        <View style={styles.form}>
+          <View>
+            <AppTextInput
+              label="البريد الإلكتروني"
+              placeholder="example@student.edu.iq"
+              value={email}
+              onChangeText={(text) => { setEmail(text); setEmailError(''); }}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoFocus
+              error={!!emailError}
+              accessibilityLabel="حقل إدخال البريد الإلكتروني"
+            />
+            {!!emailError && <Text style={styles.errorText} accessibilityLiveRegion="polite">{emailError}</Text>}
+          </View>
 
-        <AppButton title="إرسال الرابط" onPress={handleReset} loading={loading} />
-
-        <View style={styles.backContainer}>
-          <Pressable onPress={() => router.back()}>
-            <Text style={styles.backLink}>العودة لتسجيل الدخول</Text>
-          </Pressable>
+          <AppButton
+            title="إرسال رابط الاستعادة"
+            onPress={handleReset}
+            loading={loading}
+            accessibilityLabel="زر إرسال رابط استعادة كلمة المرور"
+            accessibilityState={{ disabled: loading }}
+          />
         </View>
       </View>
-    </Screen>
+
+      <View style={styles.footer}>
+        <Pressable
+          onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel="العودة لتسجيل الدخول"
+        >
+          <Text style={styles.footerLink}>العودة لتسجيل الدخول</Text>
+        </Pressable>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  header: {
-    gap: 8,
-    marginBottom: 32,
-    marginTop: 20,
+  root: {
+    flex: 1,
+    backgroundColor: colors.background,
   },
-  title: {
-    color: colors.text,
-    fontSize: 28,
-    fontWeight: '800',
-    textAlign: 'right',
+  headerCurve: {
+    backgroundColor: colors.primary,
+    borderBottomLeftRadius: radius.xxl,
+    borderBottomRightRadius: radius.xxl,
+    paddingBottom: 40,
+    paddingTop: 56,
+    alignItems: 'center',
+    paddingHorizontal: spacing.xl,
+  },
+  logoCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  appName: {
+    color: '#FFFFFF',
+    fontSize: fontSize.xxl,
+    fontWeight: fontWeight.black,
     writingDirection: 'rtl',
   },
-  subtitle: {
-    color: colors.textMuted,
-    fontSize: 16,
-    textAlign: 'right',
+  tagline: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
     writingDirection: 'rtl',
-    lineHeight: 24,
+    textAlign: 'center',
+  },
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    marginHorizontal: spacing.xl,
+    marginTop: -20,
+    padding: spacing.xl,
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.shadow,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 1,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 6,
+      },
+    }),
   },
   form: {
-    gap: 16,
+    gap: spacing.lg,
   },
-  backContainer: {
+  errorText: {
+    color: colors.danger,
+    fontSize: fontSize.xs,
+    marginTop: spacing.xs,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  footer: {
     alignItems: 'center',
-    marginTop: 16,
+    marginTop: spacing.xl,
+    paddingBottom: spacing.lg,
   },
-  backLink: {
+  footerLink: {
     color: colors.primary,
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.bold,
   },
 });

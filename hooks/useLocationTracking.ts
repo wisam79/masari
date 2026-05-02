@@ -6,6 +6,11 @@ import { locationRepository } from '../repositories/LocationRepository';
 import { locationService, type Coordinates } from '../services/LocationService';
 import type { DriverLocation } from '../types/models';
 
+import { LOCATION } from '../lib/constants';
+
+const MAX_CONSECUTIVE_ERRORS = 5;
+const ERROR_BACKOFF_MULTIPLIER = 2;
+
 interface SmartPollingState {
   isPolling: boolean;
   lastError: string | null;
@@ -14,6 +19,11 @@ interface SmartPollingState {
   nextIntervalMs: number | null;
 }
 
+/**
+ * Fetches and subscribes to real-time location updates for a specific driver.
+ * @param driverId - The ID of the driver.
+ * @returns React Query object containing the driver's location.
+ */
 export function useDriverLocation(driverId?: string) {
   const queryClient = useQueryClient();
   const query = useQuery({
@@ -56,6 +66,10 @@ export function useDriverLocation(driverId?: string) {
   return query;
 }
 
+/**
+ * Updates the current location for a driver.
+ * @returns React Mutation object for updating driver location.
+ */
 export function useUpdateDriverLocation() {
   const queryClient = useQueryClient();
 
@@ -67,12 +81,23 @@ export function useUpdateDriverLocation() {
   });
 }
 
+/**
+ * Gets the current coordinates of the device.
+ * @returns React Mutation object for fetching current coordinates.
+ */
 export function useCurrentCoordinates() {
   return useMutation({
     mutationFn: () => locationService.getCurrentCoordinates(),
   });
 }
 
+/**
+ * Polls the driver's location smartly based on distance to nearest pickup points.
+ * @param driverId - The ID of the driver.
+ * @param pickupPoints - List of target coordinates to calculate distance against.
+ * @param enabled - Whether polling is currently active.
+ * @returns The polling state (isPolling, nearestDistanceMeters, nextIntervalMs, etc.).
+ */
 export function useSmartDriverLocationPolling(
   driverId: string | undefined,
   pickupPoints: Coordinates[],
@@ -81,6 +106,7 @@ export function useSmartDriverLocationPolling(
   const queryClient = useQueryClient();
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pickupPointsRef = useRef<Coordinates[]>(pickupPoints);
+  const consecutiveErrorsRef = useRef(0);
   const [state, setState] = useState<SmartPollingState>({
     isPolling: false,
     lastError: null,
@@ -135,6 +161,7 @@ export function useSmartDriverLocationPolling(
           return;
         }
 
+        consecutiveErrorsRef.current = 0;
         queryClient.setQueryData(['driver-location', driverId], location);
         setState({
           isPolling: true,
@@ -151,7 +178,20 @@ export function useSmartDriverLocationPolling(
           return;
         }
 
-        const nextIntervalMs = locationService.getPollingIntervalForDistance(null);
+        consecutiveErrorsRef.current += 1;
+
+        if (consecutiveErrorsRef.current >= MAX_CONSECUTIVE_ERRORS) {
+          setState((current) => ({
+            ...current,
+            isPolling: false,
+            lastError: `توقف التحديث التلقائي بعد ${MAX_CONSECUTIVE_ERRORS} محاولات فاشلة. اضغط للإعادة.`,
+            nextIntervalMs: null,
+          }));
+          return;
+        }
+
+        const backoffMs = LOCATION.NORMAL_POLLING_INTERVAL * Math.pow(ERROR_BACKOFF_MULTIPLIER, Math.min(consecutiveErrorsRef.current - 1, 4));
+        const nextIntervalMs = Math.min(backoffMs, 30 * 60 * 1000);
         setState((current) => ({
           ...current,
           isPolling: true,

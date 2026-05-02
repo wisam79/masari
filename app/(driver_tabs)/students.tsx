@@ -1,4 +1,6 @@
-import { Alert, Linking, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { ActivityIndicator, Alert, Linking, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { AppButton } from '../../components/common/AppButton';
 import { EmptyState } from '../../components/common/EmptyState';
 import { Screen } from '../../components/common/Screen';
@@ -11,7 +13,7 @@ import {
   useRejectSubscription,
 } from '../../hooks/useSubscriptions';
 import { useUsersByIds } from '../../hooks/useUsers';
-import { colors } from '../../lib/theme';
+import { colors, radius, spacing, fontSize, fontWeight } from '../../lib/theme';
 import type { Subscription } from '../../types/models';
 import { formatCurrency } from '../../utils/formatters';
 
@@ -21,6 +23,7 @@ export default function StudentsScreen() {
   const approveSubscription = useApproveSubscription();
   const rejectSubscription = useRejectSubscription();
   const receiptUrl = useReceiptUrl();
+  const [loadingReceiptId, setLoadingReceiptId] = useState<string | null>(null);
   const studentIds = subscriptions.data?.map((subscription) => subscription.student_id) ?? [];
   const students = useUsersByIds(studentIds);
 
@@ -50,12 +53,13 @@ export default function StudentsScreen() {
     }
   };
 
-  const openReceipt = async (receiptPath: string | null) => {
+  const openReceipt = async (receiptPath: string | null, subscriptionId: string) => {
     if (!receiptPath) {
       Alert.alert('لا يوجد وصل', 'هذا الطلب لا يحتوي على ملف وصل محفوظ.');
       return;
     }
 
+    setLoadingReceiptId(subscriptionId);
     try {
       const url = await receiptUrl.mutateAsync(receiptPath);
       const canOpen = await Linking.canOpenURL(url);
@@ -67,36 +71,65 @@ export default function StudentsScreen() {
       await Linking.openURL(url);
     } catch (error) {
       Alert.alert('تعذر فتح الوصل', error instanceof Error ? error.message : 'حدث خطأ غير متوقع');
+    } finally {
+      setLoadingReceiptId(null);
     }
   };
 
   const renderPending = (subscription: Subscription) => (
-    <View key={subscription.id} style={styles.item}>
-      <Text style={styles.itemTitle}>{getStudentName(subscription.student_id)}</Text>
-      <Text style={styles.itemText}>المبلغ: {formatCurrency(subscription.amount)}</Text>
-      <Text style={styles.itemText}>طريقة الدفع: {translatePayment(subscription.payment_method)}</Text>
-      <Text style={styles.itemText}>المرجع: {subscription.payment_reference || 'غير مذكور'}</Text>
+    <View key={subscription.id} style={styles.requestCard} accessible={true} accessibilityRole="summary" accessibilityLabel={`طلب من ${getStudentName(subscription.student_id)}`}>
+      <View style={styles.requestHeader}>
+        <View style={styles.requestAvatar}>
+          <Ionicons name="person-outline" size={20} color={colors.warning} />
+        </View>
+        <View style={styles.requestHeaderTexts}>
+          <Text style={styles.requestName}>{getStudentName(subscription.student_id)}</Text>
+          <Text style={styles.requestAmount}>{formatCurrency(subscription.amount)}</Text>
+        </View>
+        <View style={styles.pendingBadge}>
+          <Text style={styles.pendingBadgeText}>بانتظارك</Text>
+        </View>
+      </View>
+
+      <View style={styles.requestDetails}>
+        <View style={styles.detailRow}>
+          <Ionicons name="card-outline" size={14} color={colors.textMuted} />
+          <Text style={styles.detailText}>{translatePayment(subscription.payment_method)}</Text>
+        </View>
+        <View style={styles.detailRow}>
+          <Ionicons name="key-outline" size={14} color={colors.textMuted} />
+          <Text style={styles.detailText}>{subscription.payment_reference || 'غير مذكور'}</Text>
+        </View>
+      </View>
+
       <AppButton
         title={subscription.receipt_image_path ? 'عرض الوصل' : 'لا يوجد وصل'}
-        onPress={() => openReceipt(subscription.receipt_image_path)}
-        loading={receiptUrl.isPending}
+        onPress={() => openReceipt(subscription.receipt_image_path, subscription.id)}
+        loading={loadingReceiptId === subscription.id}
         disabled={!subscription.receipt_image_path}
         variant="secondary"
+        size="small"
+        accessibilityHint="يفتح صورة وصل الدفع المرفقة مع الطلب"
       />
-      <View style={styles.actions}>
-        <View style={styles.action}>
+
+      <View style={styles.actionsRow}>
+        <View style={styles.actionFlex}>
           <AppButton
             title="موافقة"
             onPress={() => approve(subscription.id)}
             loading={approveSubscription.isPending}
+            size="small"
+            accessibilityHint="الموافقة على الطلب وتفعيل الاشتراك"
           />
         </View>
-        <View style={styles.action}>
+        <View style={styles.actionFlex}>
           <AppButton
             title="رفض"
             onPress={() => reject(subscription.id)}
             loading={rejectSubscription.isPending}
             variant="danger"
+            size="small"
+            accessibilityHint="رفض الطلب لعدم صحة الوصل"
           />
         </View>
       </View>
@@ -104,27 +137,42 @@ export default function StudentsScreen() {
   );
 
   const renderActive = (subscription: Subscription) => (
-    <View key={subscription.id} style={styles.item}>
-      <Text style={styles.itemTitle}>{getStudentName(subscription.student_id)}</Text>
-      <Text style={styles.itemText}>ينتهي: {subscription.end_date ?? 'غير محدد'}</Text>
+    <View key={subscription.id} style={styles.activeCard}>
+      <View style={styles.activeHeader}>
+        <View style={styles.activeAvatar}>
+          <Ionicons name="person-outline" size={18} color={colors.success} />
+        </View>
+        <View style={styles.activeTexts}>
+          <Text style={styles.activeName}>{getStudentName(subscription.student_id)}</Text>
+          <Text style={styles.activeExpiry}>ينتهي: {subscription.end_date ?? 'غير محدد'}</Text>
+        </View>
+        <View style={styles.activeBadge}>
+          <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+          <Text style={styles.activeBadgeText}>فعّال</Text>
+        </View>
+      </View>
     </View>
   );
 
   return (
     <Screen>
       <Section title="طلبات الاشتراك">
-        {pendingSubscriptions.length > 0 ? (
-          pendingSubscriptions.map(renderPending)
+        {subscriptions.isLoading ? (
+          <ActivityIndicator size="large" color={colors.primary} style={{ padding: 20 }} accessibilityLabel="جاري تحميل الطلبات" />
+        ) : pendingSubscriptions.length > 0 ? (
+          <View style={styles.list}>{pendingSubscriptions.map(renderPending)}</View>
         ) : (
-          <EmptyState title="لا توجد طلبات معلقة" message="طلبات الطلاب الجديدة ستظهر هنا عند رفع الوصل." />
+          <EmptyState title="لا توجد طلبات معلقة" message="طلبات الطلاب الجديدة ستظهر هنا عند رفع الوصل." icon="receipt-outline" />
         )}
       </Section>
 
       <Section title="الطلاب الفعّالون">
-        {activeSubscriptions.length > 0 ? (
-          activeSubscriptions.map(renderActive)
+        {subscriptions.isLoading ? (
+          <ActivityIndicator size="large" color={colors.primary} style={{ padding: 20 }} accessibilityLabel="جاري تحميل المشتركين" />
+        ) : activeSubscriptions.length > 0 ? (
+          <View style={styles.list}>{activeSubscriptions.map(renderActive)}</View>
         ) : (
-          <EmptyState title="لا توجد اشتراكات فعّالة" message="بعد الموافقة على الطلبات سيظهر الطلاب هنا." />
+          <EmptyState title="لا توجد اشتراكات فعّالة" message="بعد الموافقة على الطلبات سيظهر الطلاب هنا." icon="people-outline" />
         )}
       </Section>
     </Screen>
@@ -139,31 +187,121 @@ function translatePayment(method: string): string {
 }
 
 const styles = StyleSheet.create({
-  item: {
-    backgroundColor: colors.surfaceMuted,
-    borderRadius: 8,
-    gap: 6,
-    padding: 14,
+  list: {
+    gap: spacing.md,
   },
-  itemTitle: {
-    color: colors.text,
-    fontSize: 17,
-    fontWeight: '900',
-    textAlign: 'right',
-    writingDirection: 'rtl',
+  requestCard: {
+    backgroundColor: colors.warningLight,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    gap: spacing.md,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.warning,
   },
-  itemText: {
-    color: colors.textMuted,
-    fontSize: 14,
-    textAlign: 'right',
-    writingDirection: 'rtl',
-  },
-  actions: {
+  requestHeader: {
     flexDirection: 'row-reverse',
-    gap: 10,
-    marginTop: 8,
+    alignItems: 'center',
+    gap: spacing.md,
   },
-  action: {
+  requestAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  requestHeaderTexts: {
     flex: 1,
+    gap: 2,
+  },
+  requestName: {
+    color: colors.text,
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  requestAmount: {
+    color: colors.textMuted,
+    fontSize: fontSize.sm,
+    writingDirection: 'rtl',
+  },
+  pendingBadge: {
+    backgroundColor: colors.warning,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  pendingBadgeText: {
+    color: '#FFFFFF',
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+  },
+  requestDetails: {
+    gap: spacing.xs,
+    paddingRight: spacing.xxl,
+  },
+  detailRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  detailText: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    writingDirection: 'rtl',
+  },
+  actionsRow: {
+    flexDirection: 'row-reverse',
+    gap: spacing.md,
+    marginTop: spacing.xs,
+  },
+  actionFlex: {
+    flex: 1,
+  },
+  activeCard: {
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radius.md,
+    padding: spacing.md,
+  },
+  activeHeader: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  activeAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.successLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activeTexts: {
+    flex: 1,
+    gap: 2,
+  },
+  activeName: {
+    color: colors.text,
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.bold,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  activeExpiry: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    writingDirection: 'rtl',
+  },
+  activeBadge: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  activeBadgeText: {
+    color: colors.success,
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
   },
 });

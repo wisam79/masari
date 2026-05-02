@@ -4,13 +4,19 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '../types/Database';
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://ncffmgqqyxvggqhlhgmz.supabase.co';
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5jZmZtZ3F5eHZnZ3FobGhtbXoiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTcxNDQ2NjY1NSwiZXhwIjoyMDMwMDQyNjU1fQ.0';
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('Missing Supabase environment variables, using defaults for testing');
+  throw new Error(
+    'Missing Supabase environment variables. Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY in your .env file.'
+  );
 }
 
+/**
+ * Configured Supabase client for the application.
+ * Uses AsyncStorage for persisting the authentication session.
+ */
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
     storage: AsyncStorage,

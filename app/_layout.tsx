@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useAuth } from '../hooks/useAuth';
 import { View, ActivityIndicator } from 'react-native';
 import { colors } from '../lib/theme';
+import { ErrorBoundary } from '../components/common/ErrorBoundary';
 
 export default function RootLayout() {
   const [queryClient] = useState(() => new QueryClient());
@@ -19,8 +20,9 @@ export default function RootLayout() {
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <StatusBar style="auto" />
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <StatusBar style="auto" />
       <Stack screenOptions={{ headerShown: false }}>
         {!isAuthenticated ? (
           <>
@@ -28,14 +30,15 @@ export default function RootLayout() {
             <Stack.Screen name="signup" options={{ title: 'Sign Up', presentation: 'modal' }} />
             <Stack.Screen name="reset-password" options={{ title: 'Reset Password', presentation: 'modal' }} />
           </>
-        ) : user?.role === 'unassigned' ? (
+        ) : !user || user.role === 'unassigned' ? (
           <Stack.Screen name="role-selection" options={{ title: 'Select Role' }} />
-        ) : user?.role === 'student' ? (
+        ) : user.role === 'student' ? (
           <Stack.Screen name="(student_tabs)" options={{ headerShown: false }} />
         ) : (
           <Stack.Screen name="(driver_tabs)" options={{ headerShown: false }} />
         )}
       </Stack>
-    </QueryClientProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }

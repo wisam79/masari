@@ -65,6 +65,7 @@ describe('SubscriptionRepository', () => {
       (supabase.from as jest.Mock).mockReturnValue(mockChain);
 
       const result = await subscriptionRepository.createSubscription({
+        amount: 90000,
         student_id: 'student-1',
         driver_id: 'driver-1',
         institution_id: 'inst-1',

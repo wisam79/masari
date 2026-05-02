@@ -2,6 +2,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { institutionRepository } from '../repositories/InstitutionRepository';
 import type { DriverInstitutionInsert } from '../types/models';
 
+/**
+ * Fetches the list of active institutions.
+ * @returns React Query object containing active institutions.
+ */
 export function useInstitutions() {
   return useQuery({
     queryKey: ['institutions'],
@@ -9,6 +13,11 @@ export function useInstitutions() {
   });
 }
 
+/**
+ * Fetches institutions associated with a driver.
+ * @param driverId - The ID of the driver.
+ * @returns React Query object containing the driver's institutions.
+ */
 export function useDriverInstitutions(driverId?: string) {
   return useQuery({
     enabled: !!driverId,
@@ -17,6 +26,11 @@ export function useDriverInstitutions(driverId?: string) {
   });
 }
 
+/**
+ * Fetches drivers available for an institution.
+ * @param institutionId - The ID of the institution.
+ * @returns React Query object containing available drivers.
+ */
 export function useAvailableDrivers(institutionId?: string) {
   return useQuery({
     enabled: !!institutionId,
@@ -25,6 +39,10 @@ export function useAvailableDrivers(institutionId?: string) {
   });
 }
 
+/**
+ * Upserts a driver-institution relationship.
+ * @returns React Mutation object for upserting the relationship.
+ */
 export function useUpsertDriverInstitution() {
   const queryClient = useQueryClient();
 

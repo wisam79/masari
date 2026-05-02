@@ -3,18 +3,26 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useAuth } from '../hooks/useAuth';
-import { View, ActivityIndicator } from 'react-native';
-import { colors } from '../lib/theme';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { colors, spacing, fontSize, fontWeight } from '../lib/theme';
 import { ErrorBoundary } from '../components/common/ErrorBoundary';
 
 export default function RootLayout() {
-  const [queryClient] = useState(() => new QueryClient());
+  const [queryClient] = useState(() => new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: 2,
+        staleTime: 30_000,
+        refetchOnWindowFocus: false,
+      },
+    },
+  }));
   const { isLoading, isAuthenticated, user } = useAuth();
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }}>
-        <ActivityIndicator size="large" />
+      <View style={styles.loadingRoot}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -42,3 +50,12 @@ export default function RootLayout() {
     </ErrorBoundary>
   );
 }
+
+const styles = StyleSheet.create({
+  loadingRoot: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+  },
+});

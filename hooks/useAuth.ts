@@ -1,8 +1,11 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { authService } from '../services/AuthService';
 import { useAuthStore } from '../store/authStore';
 import { supabase } from '../lib/supabase';
 import { userRepository } from '../repositories/UserRepository';
+
+let globalSubscription: { unsubscribe: () => void } | null = null;
+let globalSubscriberCount = 0;
 
 export function useAuth() {
   const {
@@ -16,25 +19,29 @@ export function useAuth() {
     logout,
   } = useAuthStore();
 
+  const mountedRef = useRef(true);
+
   useEffect(() => {
-    let mounted = true;
+    mountedRef.current = true;
+    globalSubscriberCount++;
 
     const initAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
           const userProfile = await userRepository.getUserById(session.user.id);
-          if (mounted) setUser(userProfile || null);
+          if (mountedRef.current) setUser(userProfile || null);
         } else {
-          if (mounted) setUser(null);
+          if (mountedRef.current) setUser(null);
         }
       } catch (error) {
         console.error('Error during initial session fetch:', error);
-        if (mounted) setUser(null);
+        if (mountedRef.current) setUser(null);
       } finally {
-        if (mounted && !useAuthStore.getState().isInitialized) {
-          useAuthStore.getState().setInitialized(true);
-          useAuthStore.getState().setLoading(false);
+        const state = useAuthStore.getState();
+        if (!state.isInitialized) {
+          state.setInitialized(true);
+          state.setLoading(false);
         }
       }
     };
@@ -43,19 +50,26 @@ export function useAuth() {
       initAuth();
     }
 
-    const { data: { subscription } } = authService.onAuthStateChange(async (authUser) => {
-      if (mounted) {
-        setUser(authUser);
-        if (!useAuthStore.getState().isInitialized) {
-          useAuthStore.getState().setInitialized(true);
-          useAuthStore.getState().setLoading(false);
+    if (!globalSubscription) {
+      const { data: { subscription } } = authService.onAuthStateChange(async (authUser) => {
+        useAuthStore.getState().setUser(authUser);
+        const state = useAuthStore.getState();
+        if (!state.isInitialized) {
+          state.setInitialized(true);
+          state.setLoading(false);
         }
-      }
-    });
+      });
+      globalSubscription = subscription;
+    }
 
     return () => {
-      mounted = false;
-      subscription.unsubscribe();
+      mountedRef.current = false;
+      globalSubscriberCount--;
+      if (globalSubscriberCount <= 0 && globalSubscription) {
+        globalSubscription.unsubscribe();
+        globalSubscription = null;
+        globalSubscriberCount = 0;
+      }
     };
   }, []);
 

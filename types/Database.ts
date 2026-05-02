@@ -405,12 +405,12 @@ export type Database = {
     Functions: {
       approve_subscription: {
         Args: { p_subscription_id: string }
-        Returns: undefined
+        Returns: Database['public']['Tables']['subscriptions']['Row']
       }
       get_current_date: { Args: never; Returns: string }
       reject_subscription: {
         Args: { p_reason: string; p_subscription_id: string }
-        Returns: undefined
+        Returns: Database['public']['Tables']['subscriptions']['Row']
       }
     }
     Enums: {

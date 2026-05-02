@@ -8,27 +8,11 @@ export interface AuthResult {
   error?: string;
 }
 
-/**
- * Service handling authentication operations and user session management.
- */
 export class AuthService {
-  /**
-   * Signs in a user with their email and password.
-   *
-   * @param email - The user's email address.
-   * @param password - The user's password.
-   * @returns An object containing the success status, and potentially the user object or an error message.
-   */
   async signInWithEmail(email: string, password: string): Promise<AuthResult> {
     try {
-      if (!email || !email.trim()) {
-        console.error('signInWithEmail: Email is required');
-        return { success: false, error: 'Email is required' };
-      }
-      if (!password) {
-        console.error('signInWithEmail: Password is required');
-        return { success: false, error: 'Password is required' };
-      }
+      if (!email?.trim()) return { success: false, error: 'Email is required' };
+      if (!password) return { success: false, error: 'Password is required' };
 
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
@@ -40,51 +24,27 @@ export class AuthService {
         return { success: false, error: error.message };
       }
 
-      if (!data.user) {
-        console.error('signInWithEmail: User not found in response');
-        return { success: false, error: 'User not found' };
-      }
+      if (!data.user) return { success: false, error: 'User not found' };
 
       const user = await userRepository.getUserById(data.user.id);
-
-      if (!user) {
-        console.error('signInWithEmail: Failed to fetch user profile for ID:', data.user.id);
-        return { success: false, error: 'Failed to fetch user profile' };
-      }
+      if (!user) return { success: false, error: 'Failed to fetch user profile' };
 
       return { success: true, user };
     } catch (error) {
-      console.error('signInWithEmail: Unexpected error during sign in:', error);
+      console.error('signInWithEmail: Unexpected error:', error);
       return { success: false, error: 'Failed to sign in' };
     }
   }
 
-  /**
-   * Signs up a new user with their email and password.
-   *
-   * @param email - The user's email address.
-   * @param password - The user's password.
-   * @returns An object containing the success status, and potentially the user object or an error message.
-   */
   async signUpWithEmail(email: string, password: string, fullName?: string): Promise<AuthResult> {
     try {
-      if (!email || !email.trim()) {
-        console.error('signUpWithEmail: Email is required');
-        return { success: false, error: 'Email is required' };
-      }
-      if (!password) {
-        console.error('signUpWithEmail: Password is required');
-        return { success: false, error: 'Password is required' };
-      }
+      if (!email?.trim()) return { success: false, error: 'Email is required' };
+      if (!password) return { success: false, error: 'Password is required' };
 
       const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
-        options: {
-          data: {
-            full_name: fullName?.trim() || '',
-          },
-        },
+        options: { data: { full_name: fullName?.trim() || '' } },
       });
 
       if (error) {
@@ -92,17 +52,18 @@ export class AuthService {
         return { success: false, error: error.message };
       }
 
-      if (!data.user) {
-        console.error('signUpWithEmail: Failed to create user in response');
-        return { success: false, error: 'Failed to create user' };
-      }
+      if (!data.user) return { success: false, error: 'Failed to create user' };
 
       let retries = 0;
       let user: User | null = null;
-      while (retries < 5 && !user) {
-        user = await userRepository.getUserById(data.user.id);
+      while (retries < 8 && !user) {
+        try {
+          user = await userRepository.getUserById(data.user.id);
+        } catch {
+          // Profile not yet created by trigger
+        }
         if (!user) {
-          await new Promise<void>((resolve) => setTimeout(resolve, 300));
+          await new Promise<void>((resolve) => setTimeout(resolve, 500));
           retries++;
         }
       }
@@ -114,88 +75,53 @@ export class AuthService {
 
       return { success: true, user };
     } catch (error) {
-      console.error('signUpWithEmail: Unexpected error during sign up:', error);
+      console.error('signUpWithEmail: Unexpected error:', error);
       return { success: false, error: 'Failed to sign up' };
     }
   }
 
-  /**
-   * Sends a password reset email to the given email address.
-   *
-   * @param email - The user's email address.
-   * @returns An object containing the success status and optionally an error message.
-   */
   async resetPassword(email: string): Promise<AuthResult> {
     try {
-      if (!email || !email.trim()) {
-        console.error('resetPassword: Email is required');
-        return { success: false, error: 'Email is required' };
-      }
+      if (!email?.trim()) return { success: false, error: 'Email is required' };
 
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim());
       if (error) {
-        console.error('resetPassword: error sending reset email:', error.message);
+        console.error('resetPassword: error:', error.message);
         return { success: false, error: error.message };
       }
       return { success: true };
     } catch (error) {
-      console.error('resetPassword: Unexpected error during password reset:', error);
+      console.error('resetPassword: Unexpected error:', error);
       return { success: false, error: error instanceof Error ? error.message : 'Failed to send reset email' };
     }
   }
 
-  /**
-   * Retrieves the currently authenticated user.
-   *
-   * @returns A promise that resolves to the current User object, or null if no user is authenticated or an error occurs.
-   */
   async getCurrentUser(): Promise<User | null> {
     try {
       const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
 
-      if (!user) {
-        return null;
-      }
-
-      const userProfile = await userRepository.getUserById(user.id);
-      if (!userProfile) {
-        console.warn('getCurrentUser: No user profile found for ID:', user.id);
-      }
-      
-      return userProfile;
+      return await userRepository.getUserById(user.id);
     } catch (error) {
-      console.error('getCurrentUser: Error getting current user:', error);
+      console.error('getCurrentUser: Error:', error);
       return null;
     }
   }
 
-  /**
-   * Signs out the currently authenticated user.
-   *
-   * @returns A promise that resolves to true if successful, false otherwise.
-   */
   async signOut(): Promise<boolean> {
     try {
       const { error } = await supabase.auth.signOut();
-
       if (error) {
-        console.error('signOut: Error signing out from supabase:', error);
+        console.error('signOut: Error:', error);
         return false;
       }
-
       return true;
     } catch (error) {
-      console.error('signOut: Unexpected error signing out:', error);
+      console.error('signOut: Unexpected error:', error);
       return false;
     }
   }
 
-  /**
-   * Registers a callback to be invoked when the authentication state changes.
-   *
-   * @param callback - The function to call when the auth state changes, receiving the User object or null.
-   * @returns A subscription object (e.g., with an unsubscribe method).
-   */
   onAuthStateChange(callback: (user: User | null) => void) {
     if (typeof callback !== 'function') {
       throw new Error('onAuthStateChange: callback must be a function');
@@ -210,7 +136,7 @@ export class AuthService {
           callback(null);
         }
       } catch (error) {
-        console.error('onAuthStateChange: Error processing auth state change:', error);
+        console.error('onAuthStateChange: Error:', error);
         callback(null);
       }
     });

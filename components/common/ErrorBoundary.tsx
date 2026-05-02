@@ -1,6 +1,6 @@
 import { Component, type ReactNode } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors } from '../../lib/theme';
+import { colors, spacing, fontSize, fontWeight, radius } from '../../lib/theme';
 import { AppButton } from './AppButton';
 
 interface Props {
@@ -47,18 +47,18 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    padding: spacing.xxl,
     backgroundColor: colors.background,
-    gap: 16,
+    gap: spacing.lg,
   },
   title: {
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.bold,
     color: colors.text,
     textAlign: 'center',
   },
   message: {
-    fontSize: 14,
+    fontSize: fontSize.md,
     color: colors.textMuted,
     textAlign: 'center',
     lineHeight: 20,

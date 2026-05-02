@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { StyleSheet, Text, View, StyleProp, ViewStyle, Platform } from 'react-native';
+import { StyleSheet, Text, View, StyleProp, ViewStyle } from 'react-native';
 import { colors, radius, spacing, fontSize, fontWeight } from '../../lib/theme';
 
 export interface SectionProps {
@@ -7,7 +7,6 @@ export interface SectionProps {
   subtitle?: string;
   children: ReactNode;
   style?: StyleProp<ViewStyle>;
-  icon?: string;
 }
 
 export function Section({ title, subtitle, children, style }: SectionProps) {
@@ -28,17 +27,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     gap: spacing.md,
     padding: spacing.lg,
-    ...Platform.select({
-      ios: {
-        shadowColor: colors.shadow,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 1,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
   },
   header: {
     gap: 2,

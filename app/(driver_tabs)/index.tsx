@@ -6,7 +6,7 @@ import { AppTextInput } from '../../components/common/AppTextInput';
 import { EmptyState } from '../../components/common/EmptyState';
 import { Screen } from '../../components/common/Screen';
 import { Section } from '../../components/common/Section';
-import { MetricCard } from '../../components/common/ScreenHeader';
+import { MetricCard } from '../../components/common/StatusCards';
 import { useAuth } from '../../hooks/useAuth';
 import { useDriverInstitutions, useInstitutions, useUpsertDriverInstitution } from '../../hooks/useInstitutions';
 import { useDriverSubscriptions } from '../../hooks/useSubscriptions';

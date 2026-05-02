@@ -1,17 +1,18 @@
-import { Alert, StyleSheet, Text, View, ActivityIndicator, Platform } from 'react-native';
+import { Alert, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 import { AppButton } from '../../components/common/AppButton';
 import { EmptyState } from '../../components/common/EmptyState';
 import { Screen } from '../../components/common/Screen';
 import { Section } from '../../components/common/Section';
-import { StatusCard } from '../../components/common/ScreenHeader';
+import { StatusCard } from '../../components/common/StatusCards';
 import { getTodayDate, useServerDate, useStudentAttendance, useUpsertAttendance } from '../../hooks/useAttendance';
 import { useAuth } from '../../hooks/useAuth';
 import { useDriverLocation } from '../../hooks/useLocationTracking';
 import { useStudentProfile } from '../../hooks/useProfiles';
 import { useStudentSubscriptions } from '../../hooks/useSubscriptions';
 import { colors, radius, spacing, fontSize, fontWeight } from '../../lib/theme';
+import { translateAttendanceStatus } from '../../utils/translations';
 
 export default function AttendanceScreen() {
   const { user } = useAuth();
@@ -77,7 +78,7 @@ export default function AttendanceScreen() {
       <Section title="حضور اليوم" subtitle={`تاريخ اليوم: ${today}`}>
         {attendance.data ? (
           <StatusCard
-            title={translateAttendance(attendance.data.status)}
+            title={translateAttendanceStatus(attendance.data.status)}
             subtitle="آخر تحديث محفوظ لهذا اليوم."
             variant={attendanceVariant}
           />
@@ -154,15 +155,6 @@ export default function AttendanceScreen() {
       </Section>
     </Screen>
   );
-}
-
-function translateAttendance(status: string): string {
-  if (status === 'absent') return 'غائب اليوم';
-  if (status === 'driver_waiting') return 'السائق بانتظارك';
-  if (status === 'in_transit') return 'تم الصعود';
-  if (status === 'completed') return 'اكتملت الرحلة';
-  if (status === 'present') return 'حاضر';
-  return 'بانتظار التحديث';
 }
 
 const styles = StyleSheet.create({

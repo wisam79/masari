@@ -1,41 +1,18 @@
-import { StyleSheet, Text, View, Platform } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { StyleSheet, Text, View } from 'react-native';
 import { colors, radius, spacing, fontSize, fontWeight } from '../../lib/theme';
-
-interface ScreenHeaderProps {
-  title: string;
-  subtitle?: string;
-  icon?: keyof typeof Ionicons.glyphMap;
-  gradient?: boolean;
-}
-
-export function ScreenHeader({ title, subtitle, icon, gradient = false }: ScreenHeaderProps) {
-  return (
-    <View style={[styles.header, gradient && styles.headerGradient]}>
-      {icon && (
-        <View style={[styles.iconCircle, gradient && styles.iconCircleGradient]}>
-          <Ionicons name={icon} size={24} color={gradient ? '#FFFFFF' : colors.primary} />
-        </View>
-      )}
-      <Text style={[styles.title, gradient && styles.titleLight]}>{title}</Text>
-      {subtitle ? <Text style={[styles.subtitle, gradient && styles.subtitleLight]}>{subtitle}</Text> : null}
-    </View>
-  );
-}
 
 interface StatusCardProps {
   title: string;
   subtitle?: string;
   variant: 'success' | 'warning' | 'danger' | 'info' | 'muted';
-  icon?: keyof typeof Ionicons.glyphMap;
 }
 
 const variantConfig = {
-  success: { bg: colors.successLight, color: colors.success, icon: 'checkmark-circle' as const },
-  warning: { bg: colors.warningLight, color: colors.warning, icon: 'time-outline' as const },
-  danger: { bg: colors.dangerLight, color: colors.danger, icon: 'close-circle' as const },
-  info: { bg: colors.infoLight, color: colors.info, icon: 'information-circle' as const },
-  muted: { bg: colors.surfaceMuted, color: colors.textMuted, icon: 'ellipse-outline' as const },
+  success: { bg: colors.successLight, color: colors.success },
+  warning: { bg: colors.warningLight, color: colors.warning },
+  danger: { bg: colors.dangerLight, color: colors.danger },
+  info: { bg: colors.infoLight, color: colors.info },
+  muted: { bg: colors.surfaceMuted, color: colors.textMuted },
 };
 
 export function StatusCard({ title, subtitle, variant }: StatusCardProps) {
@@ -74,48 +51,6 @@ export function MetricCard({ value, label, variant = 'primary' }: MetricCardProp
 }
 
 const styles = StyleSheet.create({
-  header: {
-    gap: spacing.xs,
-    marginBottom: spacing.sm,
-  },
-  headerGradient: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.xl,
-    padding: spacing.xl,
-    marginBottom: spacing.lg,
-  },
-  iconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.sm,
-  },
-  iconCircleGradient: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-  },
-  title: {
-    color: colors.text,
-    fontSize: fontSize.xxl,
-    fontWeight: fontWeight.black,
-    textAlign: 'right',
-    writingDirection: 'rtl',
-  },
-  titleLight: {
-    color: '#FFFFFF',
-  },
-  subtitle: {
-    color: colors.textMuted,
-    fontSize: fontSize.md,
-    lineHeight: 22,
-    textAlign: 'right',
-    writingDirection: 'rtl',
-  },
-  subtitleLight: {
-    color: 'rgba(255,255,255,0.8)',
-  },
   statusCard: {
     borderRadius: radius.md,
     gap: spacing.xs,

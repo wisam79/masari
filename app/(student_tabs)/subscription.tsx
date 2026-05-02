@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View, ActivityIndicator, Platform } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { AppButton } from '../../components/common/AppButton';
@@ -7,7 +7,7 @@ import { AppTextInput } from '../../components/common/AppTextInput';
 import { EmptyState } from '../../components/common/EmptyState';
 import { Screen } from '../../components/common/Screen';
 import { Section } from '../../components/common/Section';
-import { StatusCard } from '../../components/common/ScreenHeader';
+import { StatusCard } from '../../components/common/StatusCards';
 import { useAuth } from '../../hooks/useAuth';
 import { useAvailableDrivers } from '../../hooks/useInstitutions';
 import { useStudentProfile } from '../../hooks/useProfiles';
@@ -17,6 +17,7 @@ import { colors, radius, spacing, fontSize, fontWeight } from '../../lib/theme';
 import type { PaymentMethod } from '../../lib/constants';
 import type { User } from '../../types/models';
 import { formatCurrency } from '../../utils/formatters';
+import { translateSubscriptionStatus } from '../../utils/translations';
 
 const paymentMethods: Array<{ label: string; value: PaymentMethod; icon: keyof typeof Ionicons.glyphMap }> = [
   { label: 'زين كاش', value: 'zaincash', icon: 'phone-portrait-outline' },
@@ -154,7 +155,7 @@ export default function SubscriptionScreen() {
         {latestSubscription ? (
           <View style={styles.subscriptionSummary}>
             <StatusCard
-              title={`الحالة: ${translateStatus(latestSubscription.status)}`}
+              title={`الحالة: ${translateSubscriptionStatus(latestSubscription.status)}`}
               subtitle={`المبلغ: ${formatCurrency(latestSubscription.amount)} • ينتهي: ${latestSubscription.end_date ?? 'لم يبدأ بعد'}`}
               variant={statusVariant}
             />
@@ -240,14 +241,6 @@ export default function SubscriptionScreen() {
       </Section>
     </Screen>
   );
-}
-
-function translateStatus(status: string): string {
-  if (status === 'active') return 'فعّال';
-  if (status === 'pending') return 'بانتظار المراجعة';
-  if (status === 'rejected') return 'مرفوض';
-  if (status === 'expired') return 'منتهي';
-  return status;
 }
 
 const styles = StyleSheet.create({

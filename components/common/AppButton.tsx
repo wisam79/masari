@@ -89,7 +89,7 @@ export function AppButton({
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={variant === 'secondary' || variant === 'ghost' ? colors.primary : '#FFFFFF'} size={isSmall ? 'small' : 'small'} />
+        <ActivityIndicator color={variant === 'secondary' || variant === 'ghost' ? colors.primary : '#FFFFFF'} size="small" />
       ) : (
         <Text style={[styles.text, { writingDirection: 'rtl' }, activeVariant.text, customTextStyle]}>
           {title}

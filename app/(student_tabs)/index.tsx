@@ -6,7 +6,7 @@ import { AppTextInput } from '../../components/common/AppTextInput';
 import { EmptyState } from '../../components/common/EmptyState';
 import { Screen } from '../../components/common/Screen';
 import { Section } from '../../components/common/Section';
-import { StatusCard } from '../../components/common/ScreenHeader';
+import { StatusCard } from '../../components/common/StatusCards';
 import { useAuth } from '../../hooks/useAuth';
 import { useCurrentCoordinates } from '../../hooks/useLocationTracking';
 import { useInstitutions } from '../../hooks/useInstitutions';

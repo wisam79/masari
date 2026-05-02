@@ -7,7 +7,6 @@ import {
   Pressable,
   KeyboardAvoidingView,
   Platform,
-  Dimensions,
 } from 'react-native';
 import { Link } from 'expo-router';
 import { AppButton } from '../components/common/AppButton';
@@ -16,8 +15,6 @@ import { useAuth } from '../hooks/useAuth';
 import { colors } from '../lib/theme';
 import { validateEmail, validatePassword } from '../utils/validators';
 import { translateError } from '../utils/errorMessages';
-
-const { width } = Dimensions.get('window');
 
 export default function LoginScreen() {
   const { signIn } = useAuth();

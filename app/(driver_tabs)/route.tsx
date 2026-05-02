@@ -6,7 +6,7 @@ import { AppButton } from '../../components/common/AppButton';
 import { EmptyState } from '../../components/common/EmptyState';
 import { Screen } from '../../components/common/Screen';
 import { Section } from '../../components/common/Section';
-import { StatusCard } from '../../components/common/ScreenHeader';
+import { StatusCard } from '../../components/common/StatusCards';
 import { getTodayDate, useDriverAttendance, useServerDate, useUpsertAttendance } from '../../hooks/useAttendance';
 import { useAuth } from '../../hooks/useAuth';
 import {
@@ -18,6 +18,7 @@ import { useStudentProfiles } from '../../hooks/useProfiles';
 import { useDriverSubscriptions } from '../../hooks/useSubscriptions';
 import { useUsersByIds } from '../../hooks/useUsers';
 import { colors, radius, spacing, fontSize, fontWeight } from '../../lib/theme';
+import { translateDriverAttendanceStatus } from '../../utils/translations';
 import type { Subscription } from '../../types/models';
 
 export default function RouteScreen() {
@@ -186,7 +187,7 @@ export default function RouteScreen() {
 
                   <View style={styles.statusRow}>
                     <StatusCard
-                      title={translateAttendance(status ?? 'pending')}
+                      title={translateDriverAttendanceStatus(status ?? 'pending')}
                       variant={status === 'completed' ? 'success' : status === 'in_transit' ? 'info' : status === 'driver_waiting' ? 'warning' : 'muted'}
                     />
                   </View>
@@ -221,15 +222,6 @@ function formatDistance(distanceMeters: number | null): string {
 function formatInterval(intervalMs: number | null): string {
   if (intervalMs === null) return 'غير محددة';
   return `${Math.round(intervalMs / 60000)} دقيقة`;
-}
-
-function translateAttendance(status: string): string {
-  if (status === 'absent') return 'غائب';
-  if (status === 'driver_waiting') return 'السائق وصل';
-  if (status === 'in_transit') return 'داخل الباص';
-  if (status === 'completed') return 'مكتمل';
-  if (status === 'present') return 'حاضر';
-  return 'بانتظار';
 }
 
 const styles = StyleSheet.create({

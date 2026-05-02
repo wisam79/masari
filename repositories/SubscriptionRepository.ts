@@ -73,13 +73,11 @@ export class SubscriptionRepository {
   async approveSubscription(subscriptionId: string): Promise<Subscription> {
     const { data, error } = await supabase.rpc('approve_subscription', {
       p_subscription_id: subscriptionId,
-    }).returns<Subscription>();
+    });
 
-    if (error) {
-      throw new Error(error.message);
-    }
-
-    return data;
+    if (error) throw new Error(error.message);
+    if (!data) throw new Error('No subscription returned from approve_subscription');
+    return data as Subscription;
   }
 
   /**
@@ -92,13 +90,11 @@ export class SubscriptionRepository {
     const { data, error } = await supabase.rpc('reject_subscription', {
       p_subscription_id: subscriptionId,
       p_reason: reason ?? '',
-    }).returns<Subscription>();
+    });
 
-    if (error) {
-      throw new Error(error.message);
-    }
-
-    return data;
+    if (error) throw new Error(error.message);
+    if (!data) throw new Error('No subscription returned from reject_subscription');
+    return data as Subscription;
   }
 }
 

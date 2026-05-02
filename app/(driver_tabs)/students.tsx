@@ -16,6 +16,7 @@ import { useUsersByIds } from '../../hooks/useUsers';
 import { colors, radius, spacing, fontSize, fontWeight } from '../../lib/theme';
 import type { Subscription } from '../../types/models';
 import { formatCurrency } from '../../utils/formatters';
+import { translatePaymentMethod } from '../../utils/translations';
 
 export default function StudentsScreen() {
   const { user } = useAuth();
@@ -94,7 +95,7 @@ export default function StudentsScreen() {
       <View style={styles.requestDetails}>
         <View style={styles.detailRow}>
           <Ionicons name="card-outline" size={14} color={colors.textMuted} />
-          <Text style={styles.detailText}>{translatePayment(subscription.payment_method)}</Text>
+          <Text style={styles.detailText}>{translatePaymentMethod(subscription.payment_method)}</Text>
         </View>
         <View style={styles.detailRow}>
           <Ionicons name="key-outline" size={14} color={colors.textMuted} />
@@ -177,13 +178,6 @@ export default function StudentsScreen() {
       </Section>
     </Screen>
   );
-}
-
-function translatePayment(method: string): string {
-  if (method === 'zaincash') return 'زين كاش';
-  if (method === 'fib') return 'FIB';
-  if (method === 'cash') return 'نقداً';
-  return 'أخرى';
 }
 
 const styles = StyleSheet.create({
